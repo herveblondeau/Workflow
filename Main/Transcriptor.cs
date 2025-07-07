@@ -1,0 +1,255 @@
+﻿using NAudio.Wave;
+using System.Text;
+using Whisper.net.Ggml;
+using Whisper.net;
+using Connectors.OpenRouter;
+using Main.OpenRouter;
+using Main.Recorders;
+
+namespace Main
+{
+    public class Transcriptor
+    {
+        private async Task _transcribe(string outputFile)
+        {
+            var sourceLanguage = "fr"; // Source language for transcription
+
+            // 2) TRANSCRIPTION
+            // Initialize Whisper
+            // https://github.com/sandrohanea/whisper.net?tab=readme-ov-file
+            var ggmlType = GgmlType.Base;
+            var modelFileName = Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.Parent.FullName, "ggml-base.bin"); // downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+            if (!File.Exists(modelFileName))
+            {
+                await _downloadModel(modelFileName, ggmlType);
+            }
+            var whisperFactory = WhisperFactory.FromPath(modelFileName);
+            var processor = whisperFactory.CreateBuilder()
+                .WithLanguage(sourceLanguage)
+                .Build();
+
+            Console.WriteLine("Transcribe recording from " + outputFile + "...");
+            StringBuilder transcription = new();
+            using (var fileStream = File.OpenRead(outputFile))
+            {
+                await foreach (var result in processor.ProcessAsync(fileStream))
+                {
+                    Console.WriteLine($"- {result.Text}");
+                    transcription.Append(result.Text);
+                }
+            }
+            // File.Delete(outputFile);
+            Console.WriteLine("Done");
+            Console.WriteLine($"Transcription: {transcription}");
+
+        }
+
+        public async Task Process(TranscriptionSource source, string sourceLanguage, bool cleanUp, bool concise, string? targetLanguage = null)
+        {
+            // await _transcribe("output.wav");
+            // return;
+
+            // 1) SETUP
+            var targetFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
+            var recorders = new List<IRecorder>();
+            if (source == TranscriptionSource.MicrophoneOnly || source == TranscriptionSource.MicrophoneAndAudio)
+            {
+                recorders.Add(new MicrophoneRecorder(targetFormat));
+            }
+            if (source == TranscriptionSource.AudioOnly || source == TranscriptionSource.MicrophoneAndAudio)
+            {
+                recorders.Add(new AudioRecorder(targetFormat));
+            }
+
+            foreach (var recorder in recorders)
+            {
+                recorder.SetUp();
+            }
+
+            foreach (var recorder in recorders)
+            {
+                recorder.StartRecording();
+            }
+
+            Console.WriteLine($"Recording; press ENTER to stop...");
+            Console.ReadLine();
+
+            foreach (var recorder in recorders)
+            {
+                recorder.StopRecording();
+            }
+
+            // Save recording to file
+            var outputFile = "output.wav";
+            Console.Write("Save combined audio to " + outputFile + "...");
+            // _saveStream(micRaw, targetFormat, outputFile);
+            await Task.Delay(1000); // Wait for file to be written
+            _saveRecordings(recorders, targetFormat, outputFile);
+            await Task.Delay(1000); // Wait for file to be written
+            Console.WriteLine("done");
+
+            // foreach (var recorder in recorders)
+            // {
+            //     recorder.Dispose();
+            // }
+
+            await Task.Delay(1000); // Wait for file to be written
+            // 2) TRANSCRIPTION
+            // Initialize Whisper
+            // https://github.com/sandrohanea/whisper.net?tab=readme-ov-file
+            var ggmlType = GgmlType.Base;
+            var modelFileName = Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.Parent.FullName, "ggml-base.bin"); // downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+            if (!File.Exists(modelFileName))
+            {
+                await _downloadModel(modelFileName, ggmlType);
+            }
+            var whisperFactory = WhisperFactory.FromPath(modelFileName);
+            var processor = whisperFactory.CreateBuilder()
+                .WithLanguage(sourceLanguage)
+                .Build();
+
+            Console.WriteLine("Transcribe recording from " + outputFile + "...");
+            StringBuilder transcription = new();
+            using (var fileStream = File.OpenRead(outputFile))
+            {
+                await foreach (var result in processor.ProcessAsync(fileStream))
+                {
+                    Console.WriteLine($"- {result.Text}");
+                    transcription.Append(result.Text);
+                }
+            }
+            // File.Delete(outputFile);
+            Console.WriteLine("Done");
+            Console.WriteLine($"Transcription: {transcription}");
+
+            return;
+
+            // 3) PROCESSING
+            OpenRouterChatClient client = new();
+            client.UseModel("openai/gpt-3.5-turbo");
+            ChatAgent agent = new(client);
+            string response = null!;
+            var prompt = $"Le texte suivant est une transcription d'un audio: \"{transcription}\". Merci de le transformer selon les instructions suivantes : {_buildInstructions(cleanUp, concise, targetLanguage)}\n";
+            Console.WriteLine($"Prompt: {prompt}");
+            Console.Write("Processing...");
+            response = await agent.Prompt(prompt);
+            Console.WriteLine("Done");
+
+            Console.WriteLine("");
+            Console.WriteLine($"ORIGINAL TRANSCRIPTION");
+            Console.WriteLine(transcription);
+            Console.WriteLine();
+            Console.WriteLine($"EDITED TRANSCRIPTION");
+            Console.WriteLine(response);
+            Console.WriteLine();
+            return;
+
+            // 4) UTILS
+            void _saveRecordings(List<IRecorder> recorders, WaveFormat format, string outputPath)
+            {
+                int bytesPerSample = format.BitsPerSample / 8;
+                int bufferSize = format.AverageBytesPerSecond / 10; // 100ms buffer
+                var buffers = recorders.Select(r => new byte[bufferSize]).ToList();
+                byte[] mixedBuffer = new byte[bufferSize];
+                var bufferReaders = recorders.Select(r => r.GetBufferReader());
+
+                using var writer = new WaveFileWriter(outputPath, format);
+                while (true)
+                {
+                    var bytes = bufferReaders.Select((br, i) => br.Read(buffers[i], 0, bufferSize)).ToList();
+                    if (bytes.All(b => b == 0))
+                        break;
+
+                    int maxBytes = bytes.Max();
+
+                    for (int i = 0; i < maxBytes; i += bytesPerSample)
+                    {
+                        var samples = bytes.Select((_, n) => i < bytes[n] ? BitConverter.ToInt16(buffers[n], i) : (short)0).ToList();
+                        short mixed = 0;
+                        foreach (var sample in samples)
+                        {
+                            mixed += sample;
+                        }
+                        mixed = Math.Clamp(mixed, short.MinValue, short.MaxValue);
+
+                        BitConverter.GetBytes((short)mixed).CopyTo(mixedBuffer, i);
+                    }
+
+                    writer.Write(mixedBuffer, 0, maxBytes);
+                }
+            }
+
+            // void _saveStreams(WaveStream? mic, MediaFoundationResampler? audioResampler, WaveFormat format, string outputPath)
+            // {
+            //     int bytesPerSample = format.BitsPerSample / 8;
+            //     int bufferSize = format.AverageBytesPerSecond / 10; // 100ms buffer
+            //     byte[] micBuffer = new byte[bufferSize];
+            //     byte[] sysBuffer = new byte[bufferSize];
+            //     byte[] mixedBuffer = new byte[bufferSize];
+
+            //     using var writer = new WaveFileWriter(outputPath, format);
+
+            //     while (true)
+            //     {
+            //         int micBytes = mic?.Read(micBuffer, 0, bufferSize) ?? 0;
+            //         int sysBytes = audioResampler?.Read(sysBuffer, 0, bufferSize) ?? 0;
+
+            //         if (micBytes == 0 && sysBytes == 0)
+            //             break;
+
+            //         int maxBytes = Math.Max(micBytes, sysBytes);
+
+            //         for (int i = 0; i < maxBytes; i += bytesPerSample)
+            //         {
+            //             short micSample = i < micBytes ? BitConverter.ToInt16(micBuffer, i) : (short)0;
+            //             short sysSample = i < sysBytes ? BitConverter.ToInt16(sysBuffer, i) : (short)0;
+
+            //             int mixed = micSample + sysSample;
+            //             mixed = Math.Clamp(mixed, short.MinValue, short.MaxValue);
+
+            //             BitConverter.GetBytes((short)mixed).CopyTo(mixedBuffer, i);
+            //         }
+
+            //         writer.Write(mixedBuffer, 0, maxBytes);
+            //     }
+            // }
+
+            string _buildInstructions(bool cleanUp = true, bool concise = true, string? language = null)
+            {
+                StringBuilder stringBuilder = new();
+
+                if (cleanUp)
+                {
+                    stringBuilder.Append("- il faut nettoyer les coquilles et les tics de langage\n");
+                }
+
+                if (concise)
+                {
+                    stringBuilder.Append("- il faut le reformuler pour supprimer les répétitions et tournures redondantes\n");
+                }
+
+                if (language is not null)
+                {
+                    stringBuilder.Append($"- il faut le traduire en {language}\n");
+                }
+
+                return stringBuilder.ToString();
+            }
+        }
+
+        private static async Task _downloadModel(string fileName, GgmlType ggmlType)
+        {
+            Console.WriteLine($"Downloading Model {fileName}");
+            using var modelStream = await WhisperGgmlDownloader.Default.GetGgmlModelAsync(ggmlType);
+            using var fileWriter = File.OpenWrite(fileName);
+            await modelStream.CopyToAsync(fileWriter);
+        }
+    }
+
+    public enum TranscriptionSource
+    {
+        MicrophoneOnly,
+        AudioOnly,
+        MicrophoneAndAudio,
+    }
+}
