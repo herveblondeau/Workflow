@@ -10,45 +10,8 @@ namespace Main
 {
     public class Transcriptor
     {
-        private async Task _transcribe(string outputFile)
+        public async Task Process(TranscriptionSource source, string sourceLanguage, bool cleanUp, bool concise, List<string>? additionalInstructions = null, string? targetLanguage = null)
         {
-            var sourceLanguage = "fr"; // Source language for transcription
-
-            // 2) TRANSCRIPTION
-            // Initialize Whisper
-            // https://github.com/sandrohanea/whisper.net?tab=readme-ov-file
-            var ggmlType = GgmlType.Base;
-            var modelFileName = Path.Combine(Directory.GetParent(AppContext.BaseDirectory).Parent.Parent.Parent.FullName, "ggml-base.bin"); // downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-            if (!File.Exists(modelFileName))
-            {
-                await _downloadModel(modelFileName, ggmlType);
-            }
-            var whisperFactory = WhisperFactory.FromPath(modelFileName);
-            var processor = whisperFactory.CreateBuilder()
-                .WithLanguage(sourceLanguage)
-                .Build();
-
-            Console.WriteLine("Transcribe recording from " + outputFile + "...");
-            StringBuilder transcription = new();
-            using (var fileStream = File.OpenRead(outputFile))
-            {
-                await foreach (var result in processor.ProcessAsync(fileStream))
-                {
-                    Console.WriteLine($"- {result.Text}");
-                    transcription.Append(result.Text);
-                }
-            }
-            // File.Delete(outputFile);
-            Console.WriteLine("Done");
-            Console.WriteLine($"Transcription: {transcription}");
-
-        }
-
-        public async Task Process(TranscriptionSource source, string sourceLanguage, bool cleanUp, bool concise, string? targetLanguage = null)
-        {
-            // await _transcribe("output.wav");
-            // return;
-
             // 1) SETUP
             var targetFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
             var recorders = new List<IRecorder>();
@@ -71,27 +34,33 @@ namespace Main
                 recorder.StartRecording();
             }
 
-            Console.WriteLine($"Recording; press ENTER to stop...");
+            var startDateTime = DateTime.Now;
+            Console.Write($"Recording started at {startDateTime:HH:mm:ss}... Press ENTER to stop...");
             Console.ReadLine();
+
+            var stopDateTime = DateTime.Now;
+            Console.WriteLine($"Recording stopped at {startDateTime:HH:mm:ss}");
 
             foreach (var recorder in recorders)
             {
                 recorder.StopRecording();
             }
 
+            Console.WriteLine($"Recording duration: {(stopDateTime - startDateTime).TotalSeconds} seconds");
+
             // Save recording to file
             var outputFile = "output.wav";
-            Console.Write("Save combined audio to " + outputFile + "...");
+            Console.WriteLine("Saving...");
+            // Console.Write("Save combined audio to " + outputFile + "...");
             // _saveStream(micRaw, targetFormat, outputFile);
-            await Task.Delay(1000); // Wait for file to be written
             _saveRecordings(recorders, targetFormat, outputFile);
             await Task.Delay(1000); // Wait for file to be written
-            Console.WriteLine("done");
+            // Console.WriteLine("done");
 
-            // foreach (var recorder in recorders)
-            // {
-            //     recorder.Dispose();
-            // }
+            foreach (var recorder in recorders)
+            {
+                recorder.Dispose();
+            }
 
             await Task.Delay(1000); // Wait for file to be written
             // 2) TRANSCRIPTION
@@ -108,40 +77,40 @@ namespace Main
                 .WithLanguage(sourceLanguage)
                 .Build();
 
-            Console.WriteLine("Transcribe recording from " + outputFile + "...");
+            Console.WriteLine("Transcribing...");
+            // Console.WriteLine("Transcribe recording from " + outputFile + "...");
             StringBuilder transcription = new();
             using (var fileStream = File.OpenRead(outputFile))
             {
                 await foreach (var result in processor.ProcessAsync(fileStream))
                 {
-                    Console.WriteLine($"- {result.Text}");
+                    // Console.WriteLine($"- {result.Text}");
                     transcription.Append(result.Text);
                 }
             }
-            // File.Delete(outputFile);
-            Console.WriteLine("Done");
-            Console.WriteLine($"Transcription: {transcription}");
-
-            return;
+            File.Delete(outputFile);
+            // Console.WriteLine("Done");
+            // Console.WriteLine($"Transcription: {transcription}");
 
             // 3) PROCESSING
+            Console.WriteLine("Processing...");
             OpenRouterChatClient client = new();
-            client.UseModel("openai/gpt-3.5-turbo");
+            client.UseModel("openai/gpt-4");
             ChatAgent agent = new(client);
             string response = null!;
-            var prompt = $"Le texte suivant est une transcription d'un audio: \"{transcription}\". Merci de le transformer selon les instructions suivantes : {_buildInstructions(cleanUp, concise, targetLanguage)}\n";
-            Console.WriteLine($"Prompt: {prompt}");
-            Console.Write("Processing...");
+            var prompt = $"Le texte suivant est une transcription d'un audio: \"{transcription}\". Merci de le transformer selon les instructions suivantes : {_buildInstructions(cleanUp, concise, targetLanguage, additionalInstructions)}\n";
+            // Console.WriteLine($"Prompt: {prompt}");
+            // Console.Write("Processing...");
             response = await agent.Prompt(prompt);
-            Console.WriteLine("Done");
+            // Console.WriteLine("Done");
 
-            Console.WriteLine("");
-            Console.WriteLine($"ORIGINAL TRANSCRIPTION");
-            Console.WriteLine(transcription);
-            Console.WriteLine();
-            Console.WriteLine($"EDITED TRANSCRIPTION");
+            // Console.WriteLine("");
+            // Console.WriteLine($"ORIGINAL TRANSCRIPTION");
+            // Console.WriteLine(transcription);
+            // Console.WriteLine();
+            // Console.WriteLine($"EDITED TRANSCRIPTION");
             Console.WriteLine(response);
-            Console.WriteLine();
+            // Console.WriteLine();
             return;
 
             // 4) UTILS
@@ -179,42 +148,7 @@ namespace Main
                 }
             }
 
-            // void _saveStreams(WaveStream? mic, MediaFoundationResampler? audioResampler, WaveFormat format, string outputPath)
-            // {
-            //     int bytesPerSample = format.BitsPerSample / 8;
-            //     int bufferSize = format.AverageBytesPerSecond / 10; // 100ms buffer
-            //     byte[] micBuffer = new byte[bufferSize];
-            //     byte[] sysBuffer = new byte[bufferSize];
-            //     byte[] mixedBuffer = new byte[bufferSize];
-
-            //     using var writer = new WaveFileWriter(outputPath, format);
-
-            //     while (true)
-            //     {
-            //         int micBytes = mic?.Read(micBuffer, 0, bufferSize) ?? 0;
-            //         int sysBytes = audioResampler?.Read(sysBuffer, 0, bufferSize) ?? 0;
-
-            //         if (micBytes == 0 && sysBytes == 0)
-            //             break;
-
-            //         int maxBytes = Math.Max(micBytes, sysBytes);
-
-            //         for (int i = 0; i < maxBytes; i += bytesPerSample)
-            //         {
-            //             short micSample = i < micBytes ? BitConverter.ToInt16(micBuffer, i) : (short)0;
-            //             short sysSample = i < sysBytes ? BitConverter.ToInt16(sysBuffer, i) : (short)0;
-
-            //             int mixed = micSample + sysSample;
-            //             mixed = Math.Clamp(mixed, short.MinValue, short.MaxValue);
-
-            //             BitConverter.GetBytes((short)mixed).CopyTo(mixedBuffer, i);
-            //         }
-
-            //         writer.Write(mixedBuffer, 0, maxBytes);
-            //     }
-            // }
-
-            string _buildInstructions(bool cleanUp = true, bool concise = true, string? language = null)
+            string _buildInstructions(bool cleanUp = true, bool concise = true, string? language = null, List<string>? additionalInstructions = null)
             {
                 StringBuilder stringBuilder = new();
 
@@ -233,13 +167,23 @@ namespace Main
                     stringBuilder.Append($"- il faut le traduire en {language}\n");
                 }
 
+                if (additionalInstructions is not null && additionalInstructions.Count > 0)
+                {
+                    foreach (var instruction in additionalInstructions)
+                    {
+                        stringBuilder.Append($"  - {instruction}\n");
+                    }
+                }
+
+                stringBuilder.Append($"Pas besoin d'introduction ou de commentaires, merci de donner uniquement le texte final.");
+
                 return stringBuilder.ToString();
             }
         }
 
         private static async Task _downloadModel(string fileName, GgmlType ggmlType)
         {
-            Console.WriteLine($"Downloading Model {fileName}");
+            // Console.WriteLine($"Downloading Model {fileName}");
             using var modelStream = await WhisperGgmlDownloader.Default.GetGgmlModelAsync(ggmlType);
             using var fileWriter = File.OpenWrite(fileName);
             await modelStream.CopyToAsync(fileWriter);
