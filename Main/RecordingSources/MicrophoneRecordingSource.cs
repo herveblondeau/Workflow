@@ -2,7 +2,7 @@ using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class MicrophoneRecorder : IRecorder
+public class MicrophoneRecordingSource : IRecordingSource
 {
     public RecorderStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
@@ -10,7 +10,7 @@ public class MicrophoneRecorder : IRecorder
     private MemoryStream _micBuffer = null!;
     private MicrophoneBufferReader _micBufferReader = null!;
 
-    public MicrophoneRecorder(WaveFormat targetFormat)
+    public MicrophoneRecordingSource(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
         Status = RecorderStatus.Initial;
@@ -64,7 +64,7 @@ public class MicrophoneRecorder : IRecorder
     {
         if (_micBufferReader == null)
         {
-            throw new InvalidOperationException("Microphone recording has not been stopped yet.");
+            throw new InvalidOperationException("Microphone recording source has not been stopped yet.");
         }
         return _micBufferReader;
     }

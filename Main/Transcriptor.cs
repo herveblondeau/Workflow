@@ -14,14 +14,14 @@ namespace Main
         {
             // 1) SETUP
             var targetFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
-            var recorders = new List<IRecorder>();
+            var recorders = new List<IRecordingSource>();
             if (source == TranscriptionSource.MicrophoneOnly || source == TranscriptionSource.MicrophoneAndAudio)
             {
-                recorders.Add(new MicrophoneRecorder(targetFormat));
+                recorders.Add(new MicrophoneRecordingSource(targetFormat));
             }
             if (source == TranscriptionSource.AudioOnly || source == TranscriptionSource.MicrophoneAndAudio)
             {
-                recorders.Add(new AudioRecorder(targetFormat));
+                recorders.Add(new AudioRecordingSource(targetFormat));
             }
 
             foreach (var recorder in recorders)
@@ -116,7 +116,7 @@ namespace Main
             return;
 
             // 4) UTILS
-            void _saveRecordings(List<IRecorder> recorders, WaveFormat format, string outputPath)
+            void _saveRecordings(List<IRecordingSource> recorders, WaveFormat format, string outputPath)
             {
                 int bytesPerSample = format.BitsPerSample / 8;
                 int bufferSize = format.AverageBytesPerSecond / 10; // 100ms buffer

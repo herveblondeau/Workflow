@@ -1,6 +1,6 @@
 namespace Main;
 
-public interface IRecorder : IDisposable
+public interface IRecordingSource : IDisposable
 {
     void SetUp();
     void StartRecording();
