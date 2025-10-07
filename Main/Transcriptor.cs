@@ -49,11 +49,11 @@ namespace Main
             Console.WriteLine($"Recording duration: {(stopDateTime - startDateTime).TotalSeconds} seconds");
 
             // Save recording to file
-            var outputFile = "output.wav";
+            var outputAudioFile = "output.wav";
             Console.WriteLine("Saving...");
             // Console.Write("Save combined audio to " + outputFile + "...");
             // _saveStream(micRaw, targetFormat, outputFile);
-            _saveRecordings(recorders, targetFormat, outputFile);
+            _saveRecordings(recorders, targetFormat, outputAudioFile);
             await Task.Delay(1000); // Wait for file to be written
             // Console.WriteLine("done");
 
@@ -80,7 +80,7 @@ namespace Main
             Console.WriteLine("Transcribing...");
             // Console.WriteLine("Transcribe recording from " + outputFile + "...");
             StringBuilder transcription = new();
-            using (var fileStream = File.OpenRead(outputFile))
+            using (var fileStream = File.OpenRead(outputAudioFile))
             {
                 await foreach (var result in processor.ProcessAsync(fileStream))
                 {
@@ -88,7 +88,9 @@ namespace Main
                     transcription.Append(result.Text);
                 }
             }
-            File.Delete(outputFile);
+            File.Delete(outputAudioFile);
+            await File.WriteAllTextAsync("transcription.txt", transcription.ToString());
+
             // Console.WriteLine("Done");
             // Console.WriteLine($"Transcription: {transcription}");
 
@@ -171,11 +173,11 @@ namespace Main
                 {
                     foreach (var instruction in additionalInstructions)
                     {
-                        stringBuilder.Append($"  - {instruction}\n");
+                        stringBuilder.Append($"- {instruction}\n");
                     }
                 }
 
-                stringBuilder.Append($"Pas besoin d'introduction ou de commentaires, merci de donner uniquement le texte final.");
+                // stringBuilder.Append($"Pas besoin d'introduction, commentaires ou étapes intermédiaires, merci de donner uniquement le texte final.");
 
                 return stringBuilder.ToString();
             }
