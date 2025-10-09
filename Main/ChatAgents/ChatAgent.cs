@@ -1,7 +1,7 @@
 using Microsoft.Extensions.AI;
-using Models;
+using Main.ChatAgents.Models;
 
-namespace Main.OpenRouter;
+namespace Main.ChatAgents;
 
 public class ChatAgent
 {
