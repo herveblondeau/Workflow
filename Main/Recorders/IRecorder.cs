@@ -4,5 +4,6 @@ public interface IRecorder
 {
     Task SetUp();
     Task Start();
-    Task<byte[]> Stop();
+    Task<Stream> Stop();
+    void Dispose();
 }

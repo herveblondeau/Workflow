@@ -1,8 +1,4 @@
 ﻿using NAudio.Wave;
-using System.Text;
-using Whisper.net.Ggml;
-using Whisper.net;
-using Main.Recorders;
 
 namespace Main.Recorders;
 
@@ -17,20 +13,24 @@ public class BufferedRecorder : IRecorder
         _format = format;
     }
 
-    public async Task SetUp()
+    public Task SetUp()
     {
         foreach (var source in _sources)
         {
             source.SetUp();
         }
+
+        return Task.CompletedTask;
     }
 
-    public async Task Start()
+    public Task Start()
     {
         foreach (var source in _sources)
         {
             source.StartRecording();
         }
+
+        return Task.CompletedTask;
     }
 
     public void AddSource(IRecordingSource source)
@@ -38,7 +38,7 @@ public class BufferedRecorder : IRecorder
         _sources.Add(source);
     }
 
-    public async Task<byte[]> Stop()
+    public async Task<Stream> Stop()
     {
         foreach (var source in _sources)
         {
@@ -51,7 +51,7 @@ public class BufferedRecorder : IRecorder
         byte[] mixedBuffer = new byte[bufferSize];
         var bufferReaders = _sources.Select(r => r.GetBufferReader());
 
-        List<byte> output = new();
+        var stream = new MemoryStream();
         while (true)
         {
             var bytes = bufferReaders.Select((br, i) => br.Read(buffers[i], 0, bufferSize)).ToList();
@@ -73,7 +73,7 @@ public class BufferedRecorder : IRecorder
                 BitConverter.GetBytes((short)mixed).CopyTo(mixedBuffer, i);
             }
 
-            output.AddRange(mixedBuffer.Take(maxBytes));
+            stream.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
         foreach (var source in _sources)
@@ -81,6 +81,17 @@ public class BufferedRecorder : IRecorder
             source.Dispose();
         }
 
-        return output.ToArray();
+        await Task.Delay(1000);
+
+        stream.Position = 0;
+        return stream;
+    }
+
+    public void Dispose()
+    {
+        foreach (var source in _sources)
+        {
+            source.Dispose();
+        }
     }
 }
