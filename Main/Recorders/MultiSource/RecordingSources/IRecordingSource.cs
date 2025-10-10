@@ -1,4 +1,4 @@
-namespace Main.Recorders.RecordingSources;
+namespace Main.Recorders.MultiSource.RecordingSources;
 
 public interface IRecordingSource : IDisposable
 {

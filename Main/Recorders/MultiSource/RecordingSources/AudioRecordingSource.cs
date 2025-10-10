@@ -1,7 +1,7 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-namespace Main.Recorders.RecordingSources;
+namespace Main.Recorders.MultiSource.RecordingSources;
 
 public class AudioRecordingSource : IRecordingSource
 {

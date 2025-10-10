@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 
-namespace Main.ChatAgents;
+namespace Main.ChatAgents.OpenRouter;
 
 public class OpenRouterChatClient : IChatClient
 {

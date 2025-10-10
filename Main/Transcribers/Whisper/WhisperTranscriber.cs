@@ -2,7 +2,8 @@ using System.Text;
 using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
-namespace Main.Transcribers;
+
+namespace Main.Transcribers.Whisper;
 
 public class WhisperTranscriber : ITranscriber
 {

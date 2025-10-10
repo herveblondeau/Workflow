@@ -1,14 +1,14 @@
-﻿using Main.Recorders.RecordingSources;
+﻿using Main.Recorders.MultiSource.RecordingSources;
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Recorders.MultiSource;
 
-public class BufferedRecorder : IRecorder
+public class MultiSourceRecorder : IRecorder
 {
     private readonly List<IRecordingSource> _sources;
     private readonly WaveFormat _format;
 
-    public BufferedRecorder(WaveFormat format)
+    public MultiSourceRecorder(WaveFormat format)
     {
         _sources = new List<IRecordingSource>();
         _format = format;
@@ -34,9 +34,10 @@ public class BufferedRecorder : IRecorder
         return Task.CompletedTask;
     }
 
-    public void AddSource(IRecordingSource source)
+    public MultiSourceRecorder AddSource(IRecordingSource source)
     {
         _sources.Add(source);
+        return this;
     }
 
     public async Task<Stream> Stop()
@@ -71,7 +72,7 @@ public class BufferedRecorder : IRecorder
                 }
                 mixed = Math.Clamp(mixed, short.MinValue, short.MaxValue);
 
-                BitConverter.GetBytes((short)mixed).CopyTo(mixedBuffer, i);
+                BitConverter.GetBytes(mixed).CopyTo(mixedBuffer, i);
             }
 
             stream.Write(mixedBuffer, 0, mixedBuffer.Length);
