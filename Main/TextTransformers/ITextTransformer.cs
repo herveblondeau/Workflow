@@ -1,7 +1,6 @@
-﻿namespace Main.TextTransformers
+﻿namespace Main.TextTransformers;
+
+public interface ITextTransformer
 {
-    public interface ITextTransformer
-    {
-        Task<string> Process(string input);
-    }
+    Task<string> Process(string input);
 }

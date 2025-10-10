@@ -4,25 +4,25 @@ using Main.TextTransformers;
 
 namespace Main;
 
-public class SpeechProcessor
+public class SpeechToTextProcessor
 {
     private IRecorder _recorder = null!;
     private ITranscriber _transcriber = null!;
     private ITextTransformer _textProcessor = null!;
 
-    public SpeechProcessor UseRecorder(IRecorder recorder)
+    public SpeechToTextProcessor UseRecorder(IRecorder recorder)
     {
         _recorder = recorder;
         return this;
     }
 
-    public SpeechProcessor UseTranscriber(ITranscriber transcriber)
+    public SpeechToTextProcessor UseTranscriber(ITranscriber transcriber)
     {
         _transcriber = transcriber;
         return this;
     }
 
-    public SpeechProcessor UseTextTransformer(ITextTransformer textProcessor)
+    public SpeechToTextProcessor UseTextTransformer(ITextTransformer textProcessor)
     {
         _textProcessor = textProcessor;
         return this;

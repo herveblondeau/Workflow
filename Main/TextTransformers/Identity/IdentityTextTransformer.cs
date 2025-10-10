@@ -1,10 +1,9 @@
-﻿namespace Main.TextTransformers.Identity
+﻿namespace Main.TextTransformers.Identity;
+
+public class IdentityTextTransformer : ITextTransformer
 {
-    public class IdentityTextTransformer : ITextTransformer
+    public Task<string> Process(string input)
     {
-        public Task<string> Process(string input)
-        {
-            return Task.FromResult(input);
-        }
+        return Task.FromResult(input);
     }
 }

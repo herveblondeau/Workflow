@@ -24,7 +24,7 @@ var textProcessor = new IdentityTextTransformer();
 //var chatAgent = new ChatAgent(new OpenRouterChatClient());
 
 //
-var speechAnalyzer = new SpeechProcessor();
+var speechAnalyzer = new SpeechToTextProcessor();
 speechAnalyzer
     .UseRecorder(recorder)
     .UseTranscriber(transcriber)
