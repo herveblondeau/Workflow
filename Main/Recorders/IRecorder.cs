@@ -1,14 +1,9 @@
-namespace Main;
+namespace Main.Recorders;
 
-public interface IRecorder : IDisposable
+public interface IRecorder
 {
-    void SetUp();
-    void StartRecording();
-    void StopRecording();
-    IBufferReader GetBufferReader(); // TODO: too specific; ideally should return something more generic like a stream
-}
-
-public interface IBufferReader : IDisposable
-{
-    int Read(byte[] buffer, int offset, int count);
+    Task SetUp();
+    Task Start();
+    Task<Stream> Stop();
+    void Dispose();
 }

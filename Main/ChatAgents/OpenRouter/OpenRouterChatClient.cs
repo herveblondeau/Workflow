@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.AI;
 
-namespace Connectors.OpenRouter;
+namespace Main.ChatAgents.OpenRouter;
 
 public class OpenRouterChatClient : IChatClient
 {
@@ -26,7 +26,6 @@ public class OpenRouterChatClient : IChatClient
 
     public void Dispose()
     {
-        throw new NotImplementedException();
     }
 
     public async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)

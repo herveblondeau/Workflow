@@ -1,20 +1,20 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Recorders.MultiSource.RecordingSources;
 
-public class AudioRecorder : IRecorder
+public class AudioRecordingSource : IRecordingSource
 {
-    public RecorderStatus Status { get; private set; }
+    public RecordingStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioBuffer = null!;
     private AudioBufferReader _audioBufferReader = null!;
 
-    public AudioRecorder(WaveFormat targetFormat)
+    public AudioRecordingSource(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
 
     public void SetUp()
@@ -32,21 +32,21 @@ public class AudioRecorder : IRecorder
             }
         };
 
-        Status = RecorderStatus.Ready;
+        Status = RecordingStatus.Ready;
     }
 
     public void StartRecording()
     {
-        Status = RecorderStatus.Starting;
+        Status = RecordingStatus.Starting;
 
         _audioCapture.StartRecording();
 
-        Status = RecorderStatus.Recording;
+        Status = RecordingStatus.Recording;
     }
 
     public void StopRecording()
     {
-        Status = RecorderStatus.Stopping;
+        Status = RecordingStatus.Stopping;
 
         _audioCapture.StopRecording();
         Thread.Sleep(100);
@@ -58,18 +58,18 @@ public class AudioRecorder : IRecorder
             ResamplerQuality = 60
         });
 
-        Status = RecorderStatus.Recorded;
+        Status = RecordingStatus.Recorded;
     }
 
     public void Reset()
     {
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
     public IBufferReader GetBufferReader()
     {
         if (_audioBufferReader == null)
         {
-            throw new InvalidOperationException("Microphone recording has not been stopped yet.");
+            throw new InvalidOperationException("Microphone recording source has not been stopped yet.");
         }
         return _audioBufferReader;
     }
@@ -84,5 +84,30 @@ public class AudioRecorder : IRecorder
         _audioCapture?.Dispose();
         _audioBuffer?.Dispose();
         _audioBufferReader?.Dispose();
+    }
+
+    private class AudioBufferReader : IBufferReader
+    {
+        private readonly MediaFoundationResampler _audioResampler = null!;
+
+        public AudioBufferReader(MediaFoundationResampler audioResampler)
+        {
+            _audioResampler = audioResampler;
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            if (_audioResampler is null)
+            {
+                return 0; // No data to read
+            }
+
+            return _audioResampler.Read(buffer, offset, count);
+        }
+
+        public void Dispose()
+        {
+            _audioResampler?.Dispose();
+        }
     }
 }

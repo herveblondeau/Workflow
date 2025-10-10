@@ -1,6 +1,6 @@
-namespace Main;
+namespace Main.Recorders.MultiSource.RecordingSources;
 
-public enum RecorderStatus
+public enum RecordingStatus
 {
     Initial,
     Ready,

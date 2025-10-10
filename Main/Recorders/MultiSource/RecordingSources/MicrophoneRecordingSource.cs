@@ -1,19 +1,19 @@
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Recorders.MultiSource.RecordingSources;
 
-public class MicrophoneRecorder : IRecorder
+public class MicrophoneRecordingSource : IRecordingSource
 {
-    public RecorderStatus Status { get; private set; }
+    public RecordingStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micBuffer = null!;
     private MicrophoneBufferReader _micBufferReader = null!;
 
-    public MicrophoneRecorder(WaveFormat targetFormat)
+    public MicrophoneRecordingSource(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
 
     public void SetUp()
@@ -30,21 +30,21 @@ public class MicrophoneRecorder : IRecorder
             _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
         };
 
-        Status = RecorderStatus.Ready;
+        Status = RecordingStatus.Ready;
     }
 
     public void StartRecording()
     {
-        Status = RecorderStatus.Starting;
+        Status = RecordingStatus.Starting;
 
         _micCapture.StartRecording();
 
-        Status = RecorderStatus.Recording;
+        Status = RecordingStatus.Recording;
     }
 
     public void StopRecording()
     {
-        Status = RecorderStatus.Stopping;
+        Status = RecordingStatus.Stopping;
 
         _micCapture.StopRecording();
         Thread.Sleep(100);
@@ -53,18 +53,18 @@ public class MicrophoneRecorder : IRecorder
 
         _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
 
-        Status = RecorderStatus.Recorded;
+        Status = RecordingStatus.Recorded;
     }
 
     public void Reset()
     {
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
     public IBufferReader GetBufferReader()
     {
         if (_micBufferReader == null)
         {
-            throw new InvalidOperationException("Microphone recording has not been stopped yet.");
+            throw new InvalidOperationException("Microphone recording source has not been stopped yet.");
         }
         return _micBufferReader;
     }
@@ -79,5 +79,30 @@ public class MicrophoneRecorder : IRecorder
         _micCapture?.Dispose();
         _micBuffer?.Dispose();
         _micBufferReader?.Dispose();
+    }
+
+    private class MicrophoneBufferReader : IBufferReader
+    {
+        private readonly RawSourceWaveStream _micRaw = null!;
+
+        public MicrophoneBufferReader(RawSourceWaveStream micRaw)
+        {
+            _micRaw = micRaw;
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            if (_micRaw == null || _micRaw.Length == 0)
+            {
+                return 0; // No data to read
+            }
+
+            return _micRaw.Read(buffer, offset, count);
+        }
+
+        public void Dispose()
+        {
+            _micRaw?.Dispose();
+        }
     }
 }
