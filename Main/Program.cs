@@ -1,10 +1,9 @@
 ﻿using Main;
 using NAudio.Wave;
-using Main.ChatAgents;
 using Main.Recorders.MultiSource;
 using Main.Recorders.MultiSource.RecordingSources;
 using Main.Transcribers.Whisper;
-using Main.ChatAgents.OpenRouter;
+using Main.TextTransformers.Identity;
 
 // PARAMETERS
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
@@ -18,15 +17,18 @@ recorder.AddSource(new MicrophoneRecordingSource(waveFormat))
 // Transcriber
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
 
-// Chat agent
-var chatAgent = new ChatAgent(new OpenRouterChatClient());
+// Text processor
+var textProcessor = new IdentityTextTransformer();
+
+//// Chat agent
+//var chatAgent = new ChatAgent(new OpenRouterChatClient());
 
 //
-var speechAnalyzer = new SpeechAnalyzer();
+var speechAnalyzer = new SpeechProcessor();
 speechAnalyzer
     .UseRecorder(recorder)
     .UseTranscriber(transcriber)
-    .UseChatAgent(chatAgent);
+    .UseTextTransformer(textProcessor);
 
 await speechAnalyzer.Process(sourceLanguage: "en", cleanUp: true, concise: true, targetLanguage: "anglais", additionalInstructions: [
     "le texte est destiné à une formation en ligne et le ton doit donc être relativement formel",
