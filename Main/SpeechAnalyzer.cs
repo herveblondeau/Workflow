@@ -3,6 +3,7 @@ using Whisper.net.Ggml;
 using Main.Recorders;
 using Main.Transcribers;
 using Main.ChatAgents;
+using Main.Recorders.RecordingSources;
 
 namespace Main;
 
@@ -30,7 +31,7 @@ public class SpeechAnalyzer
         return this;
     }
 
-    public async Task Process(TranscriptionSource source, string sourceLanguage, bool cleanUp, bool concise, List<string>? additionalInstructions = null, string? targetLanguage = null)
+    public async Task Process(RecordingInput source, string sourceLanguage, bool cleanUp, bool concise, List<string>? additionalInstructions = null, string? targetLanguage = null)
     {
         // 1) RECORDING
         await _recorder.SetUp();

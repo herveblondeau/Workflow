@@ -3,7 +3,7 @@ using NAudio.Wave;
 using Main.ChatAgents;
 using Main.Recorders;
 using Main.Transcribers;
-using Main.RecordingSources;
+using Main.Recorders.RecordingSources;
 
 // PARAMETERS
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
@@ -34,7 +34,7 @@ speechAnalyzer
     .UseTranscriber(transcriber)
     .UseChatAgent(chatAgent);
 
-await speechAnalyzer.Process(TranscriptionSource.AudioOnly, sourceLanguage: "en", cleanUp: true, concise: true, targetLanguage: "anglais", additionalInstructions: [
+await speechAnalyzer.Process(RecordingInput.AudioOnly, sourceLanguage: "en", cleanUp: true, concise: true, targetLanguage: "anglais", additionalInstructions: [
     "le texte est destiné à une formation en ligne et le ton doit donc être relativement formel",
     "n'hésite pas à reformuler et/ou réordonner les phrases pour qu'elles soient plus claires et concises",
 ]);

@@ -1,4 +1,4 @@
-namespace Main;
+namespace Main.Recorders.RecordingSources;
 
 public enum RecorderStatus
 {
