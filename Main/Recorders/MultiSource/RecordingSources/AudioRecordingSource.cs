@@ -5,7 +5,7 @@ namespace Main.Recorders.MultiSource.RecordingSources;
 
 public class AudioRecordingSource : IRecordingSource
 {
-    public RecorderStatus Status { get; private set; }
+    public RecordingStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioBuffer = null!;
@@ -14,7 +14,7 @@ public class AudioRecordingSource : IRecordingSource
     public AudioRecordingSource(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
 
     public void SetUp()
@@ -32,21 +32,21 @@ public class AudioRecordingSource : IRecordingSource
             }
         };
 
-        Status = RecorderStatus.Ready;
+        Status = RecordingStatus.Ready;
     }
 
     public void StartRecording()
     {
-        Status = RecorderStatus.Starting;
+        Status = RecordingStatus.Starting;
 
         _audioCapture.StartRecording();
 
-        Status = RecorderStatus.Recording;
+        Status = RecordingStatus.Recording;
     }
 
     public void StopRecording()
     {
-        Status = RecorderStatus.Stopping;
+        Status = RecordingStatus.Stopping;
 
         _audioCapture.StopRecording();
         Thread.Sleep(100);
@@ -58,12 +58,12 @@ public class AudioRecordingSource : IRecordingSource
             ResamplerQuality = 60
         });
 
-        Status = RecorderStatus.Recorded;
+        Status = RecordingStatus.Recorded;
     }
 
     public void Reset()
     {
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
     public IBufferReader GetBufferReader()
     {

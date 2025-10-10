@@ -4,7 +4,7 @@ namespace Main.Recorders.MultiSource.RecordingSources;
 
 public class MicrophoneRecordingSource : IRecordingSource
 {
-    public RecorderStatus Status { get; private set; }
+    public RecordingStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micBuffer = null!;
@@ -13,7 +13,7 @@ public class MicrophoneRecordingSource : IRecordingSource
     public MicrophoneRecordingSource(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
 
     public void SetUp()
@@ -30,21 +30,21 @@ public class MicrophoneRecordingSource : IRecordingSource
             _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
         };
 
-        Status = RecorderStatus.Ready;
+        Status = RecordingStatus.Ready;
     }
 
     public void StartRecording()
     {
-        Status = RecorderStatus.Starting;
+        Status = RecordingStatus.Starting;
 
         _micCapture.StartRecording();
 
-        Status = RecorderStatus.Recording;
+        Status = RecordingStatus.Recording;
     }
 
     public void StopRecording()
     {
-        Status = RecorderStatus.Stopping;
+        Status = RecordingStatus.Stopping;
 
         _micCapture.StopRecording();
         Thread.Sleep(100);
@@ -53,12 +53,12 @@ public class MicrophoneRecordingSource : IRecordingSource
 
         _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
 
-        Status = RecorderStatus.Recorded;
+        Status = RecordingStatus.Recorded;
     }
 
     public void Reset()
     {
-        Status = RecorderStatus.Initial;
+        Status = RecordingStatus.Initial;
     }
     public IBufferReader GetBufferReader()
     {

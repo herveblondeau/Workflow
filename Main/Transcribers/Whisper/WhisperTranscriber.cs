@@ -17,7 +17,7 @@ public class WhisperTranscriber : ITranscriber
         _waveFormat = waveFormat;
     }
 
-    public async Task<string> Transcribe(Stream inputStream, string language)
+    public async Task<string> Transcribe(Stream inputStream, string inputLanguage)
     {
         // Whisper cannot work from a Stream; it requires an actual WAV file to operate
         using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, _waveFormat))
@@ -33,7 +33,7 @@ public class WhisperTranscriber : ITranscriber
         }
         var whisperFactory = WhisperFactory.FromPath(_modelFilePath);
         var processor = whisperFactory.CreateBuilder()
-            .WithLanguage(language)
+            .WithLanguage(inputLanguage)
             .Build();
 
         StringBuilder transcription = new();
