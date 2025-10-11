@@ -29,7 +29,7 @@ public class AITextTransformer : ITextTransformer
 
         var prompt = @$"Here is some content in the language '{_language}': {input}
             Please transform it according to the following instructions:
-            " + string.Join("\n", _instructions.Select(l => $"- {l}"));
+            " + string.Join(Environment.NewLine, _instructions.Select(l => $"- {l}"));
         return await _chatAgent.Prompt(prompt);
     }
 }
