@@ -78,11 +78,6 @@ public class MultiSourceRecorder : IRecorder
             stream.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
-        foreach (var source in _sources)
-        {
-            source.Dispose();
-        }
-
         await Task.Delay(1000);
 
         stream.Position = 0;
