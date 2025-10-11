@@ -15,8 +15,7 @@ var language = "fr";
 // SETUP
 // Recorder
 var recorder = new MultiSourceRecorder(waveFormat);
-recorder.AddSource(new MicrophoneRecordingSource(waveFormat))
-    .AddSource(new AudioRecordingSource(waveFormat));
+recorder.AddSource(new AudioRecordingSource(waveFormat));
 
 // Transcriber
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, language); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
