@@ -1,9 +1,8 @@
 namespace Main.Recorders;
 
-public interface IRecorder
+public interface IRecorder : IDisposable
 {
     Task SetUp();
     Task Start();
     Task<Stream> Stop();
-    void Dispose();
 }
