@@ -8,7 +8,7 @@ public class SpeechToTextProcessor
 {
     private IRecorder _recorder = null!;
     private ITranscriber _transcriber = null!;
-    private ITextTransformer _textProcessor = null!;
+    private ITextTransformer _textTransformer = null!;
 
     public SpeechToTextProcessor UseRecorder(IRecorder recorder)
     {
@@ -22,9 +22,9 @@ public class SpeechToTextProcessor
         return this;
     }
 
-    public SpeechToTextProcessor UseTextTransformer(ITextTransformer textProcessor)
+    public SpeechToTextProcessor UseTextTransformer(ITextTransformer textTransformer)
     {
-        _textProcessor = textProcessor;
+        _textTransformer = textTransformer;
         return this;
     }
 
@@ -40,7 +40,7 @@ public class SpeechToTextProcessor
             throw new ArgumentNullException("Transcriber is undefined");
         }
 
-        if (_textProcessor is null)
+        if (_textTransformer is null)
         {
             throw new ArgumentNullException("Text processor is undefined");
         }
@@ -49,23 +49,25 @@ public class SpeechToTextProcessor
         await _recorder.SetUp();
         await _recorder.Start();
 
-        var startDateTime = DateTime.Now;
-        Console.Write($"Recording started at {startDateTime:HH:mm:ss}... Press ENTER to stop...");
+        Console.Write($"Recording started... Press ENTER to stop...");
         Console.ReadLine();
-        Console.WriteLine($"Stopping recording...");
+        
+        Console.Write($"Stopping recording...");
         var recordedStream = await _recorder.Stop();
-        var stopDateTime = DateTime.Now;
-        Console.WriteLine($"Recording stopped at {stopDateTime:HH:mm:ss}");
-        Console.WriteLine($"Recording duration: {(stopDateTime - startDateTime).TotalSeconds} seconds");
-
         _recorder.Dispose();
+        Console.WriteLine($" Done");
 
         // 2) TRANSCRIPTION
+        Console.Write($"Transcribing...");
         var transcription = await _transcriber.Transcribe(recordedStream);
+        Console.WriteLine($" Done");
         await File.WriteAllTextAsync("transcription.txt", transcription);
 
-        // 3) TEXT PROCESSING
-        var result = await _textProcessor.Process(transcription);
+        // 3) TEXT TRANSFORMATION
+        Console.Write($"Transforming...");
+        var result = await _textTransformer.Process(transcription);
+        Console.WriteLine($" Done");
+
         return result;
     }
 }
