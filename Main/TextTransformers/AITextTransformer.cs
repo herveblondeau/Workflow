@@ -1,6 +1,6 @@
 ﻿using Main.ChatAgents;
 
-namespace Main.TextTransformers.AI;
+namespace Main.TextTransformers;
 
 public class AITextTransformer : ITextTransformer
 {
@@ -13,7 +13,7 @@ public class AITextTransformer : ITextTransformer
     {
         _chatAgent = chatAgent;
         _language = language;
-        
+
         _instructions = new();
     }
 

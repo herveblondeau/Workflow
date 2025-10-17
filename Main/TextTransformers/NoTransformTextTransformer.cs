@@ -1,6 +1,6 @@
-﻿namespace Main.TextTransformers.Empty;
+﻿namespace Main.TextTransformers;
 
-public class EmptyTextTransformer : ITextTransformer
+public class NoTransformTextTransformer : ITextTransformer
 {
     public Task<string> Process(string input)
     {

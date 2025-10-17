@@ -3,7 +3,7 @@ using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
 
-namespace Main.Transcribers.Whisper;
+namespace Main.Transcribers;
 
 public class WhisperTranscriber : ITranscriber
 {
@@ -47,7 +47,7 @@ public class WhisperTranscriber : ITranscriber
             }
         }
 
-        File.Delete(TEMPORARY_WAV_FILE_NAME);
+        //File.Delete(TEMPORARY_WAV_FILE_NAME);
 
         return transcription.ToString();
     }

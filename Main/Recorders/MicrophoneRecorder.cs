@@ -1,22 +1,20 @@
 using NAudio.Wave;
 
-namespace Main.Recorders.MultiSource.RecordingSources;
+namespace Main.Recorders;
 
-public class MicrophoneRecordingSource : IRecordingSource
+public class MicrophoneRecorder : IBufferableRecorder
 {
-    public RecordingStatus Status { get; private set; }
     private readonly WaveFormat _targetFormat;
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micBuffer = null!;
     private MicrophoneBufferReader _micBufferReader = null!;
 
-    public MicrophoneRecordingSource(WaveFormat targetFormat)
+    public MicrophoneRecorder(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-        Status = RecordingStatus.Initial;
     }
 
-    public void SetUp()
+    public Task SetUp()
     {
         _micCapture = new WaveInEvent
         {
@@ -30,48 +28,30 @@ public class MicrophoneRecordingSource : IRecordingSource
             _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
         };
 
-        Status = RecordingStatus.Ready;
+        return Task.CompletedTask;
     }
 
-    public void StartRecording()
+    public Task Start()
     {
-        Status = RecordingStatus.Starting;
-
         _micCapture.StartRecording();
-
-        Status = RecordingStatus.Recording;
+        return Task.CompletedTask;
     }
 
-    public void StopRecording()
+    public async Task<Stream> Stop()
     {
-        Status = RecordingStatus.Stopping;
-
         _micCapture.StopRecording();
         Thread.Sleep(100);
         _micCapture.Dispose();
         _micBuffer.Position = 0;
 
-        _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
-
-        Status = RecordingStatus.Recorded;
+        await Task.CompletedTask;
+        return _micBuffer;
     }
 
-    public void Reset()
-    {
-        Status = RecordingStatus.Initial;
-    }
     public IBufferReader GetBufferReader()
     {
-        if (_micBufferReader == null)
-        {
-            throw new InvalidOperationException("Microphone recording source has not been stopped yet.");
-        }
+        _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
         return _micBufferReader;
-    }
-
-    public int Read(byte[] buffer, int offset, int count)
-    {
-        return _micBufferReader.Read(buffer, offset, count);
     }
 
     public void Dispose()

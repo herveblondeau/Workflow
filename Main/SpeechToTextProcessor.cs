@@ -45,29 +45,32 @@ public class SpeechToTextProcessor
             throw new ArgumentNullException("Text processor is undefined");
         }
 
-        // 1) RECORDING
-        await _recorder.SetUp();
-        await _recorder.Start();
+        using (_recorder)
+        {
+            // 1) RECORDING
+            await _recorder.SetUp();
+            await _recorder.Start();
 
-        Console.Write($"Recording started... Press ENTER to stop...");
-        Console.ReadLine();
-        
-        Console.Write($"Stopping recording...");
-        var recordedStream = await _recorder.Stop();
-        _recorder.Dispose();
-        Console.WriteLine($" Done");
+            Console.Write($"Recording started... Press ENTER to stop...");
+            Console.ReadLine();
 
-        // 2) TRANSCRIPTION
-        Console.Write($"Transcribing...");
-        var transcription = await _transcriber.Transcribe(recordedStream);
-        Console.WriteLine($" Done");
-        await File.WriteAllTextAsync("transcription.txt", transcription);
+            Console.Write($"Stopping recording...");
+            var recordedStream = await _recorder.Stop();
+            //_recorder.Dispose();
+            Console.WriteLine($" Done");
 
-        // 3) TEXT TRANSFORMATION
-        Console.Write($"Transforming...");
-        var result = await _textTransformer.Process(transcription);
-        Console.WriteLine($" Done");
+            // 2) TRANSCRIPTION
+            Console.Write($"Transcribing...");
+            var transcription = await _transcriber.Transcribe(recordedStream);
+            Console.WriteLine($" Done");
+            await File.WriteAllTextAsync("transcription.txt", transcription);
 
-        return result;
+            // 3) TEXT TRANSFORMATION
+            Console.Write($"Transforming...");
+            var result = await _textTransformer.Process(transcription);
+            Console.WriteLine($" Done");
+
+            return result;
+        }
     }
 }
