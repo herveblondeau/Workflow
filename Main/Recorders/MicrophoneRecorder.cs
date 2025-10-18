@@ -36,8 +36,6 @@ public class MicrophoneRecorder : IBufferableRecorder
 
         _micBuffer.Position = 0;
 
-        Thread.Sleep(100); // try to remove this
-
         return _micBuffer;
     }
 

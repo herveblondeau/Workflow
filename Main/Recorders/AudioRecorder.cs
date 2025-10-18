@@ -38,8 +38,6 @@ public class AudioRecorder : IBufferableRecorder
 
         _audioBuffer.Position = 0;
 
-        Thread.Sleep(100); // TODO: try to remove this
-
         if (_targetFormat == _audioCapture.WaveFormat)
         {
             // TODO: this hasn't been tested so far because the capture uses PCM, which cannot be used to instantiate a WaveFormat
