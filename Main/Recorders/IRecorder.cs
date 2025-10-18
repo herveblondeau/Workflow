@@ -5,7 +5,7 @@ namespace Main.Recorders;
 public interface IRecorder : IDisposable
 {
     void Start(WaveFormat targetFormat);
-    Task<Stream> Stop();
+    Stream Stop();
 }
 public interface IBufferableRecorder : IRecorder
 {

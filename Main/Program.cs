@@ -13,9 +13,10 @@ var sourceLanguage = "en";
 
 // ACTUAL
 //var recorder = new AudioRecorder();
+//var recorder = new MicrophoneRecorder();
 var recorder = new MultiSourceRecorder();
-recorder.AddSource(new AudioRecorder());
-//recorder.AddSource(new MicrophoneRecorder());
+//recorder.AddSource(new AudioRecorder());
+recorder.AddSource(new MicrophoneRecorder());
 
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, sourceLanguage); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
 

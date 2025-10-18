@@ -29,11 +29,11 @@ public class MultiSourceRecorder : IRecorder
         return this;
     }
 
-    public async Task<Stream> Stop()
+    public Stream Stop()
     {
         foreach (var source in _sources)
         {
-            await source.Stop();
+            source.Stop();
         }
 
         int bytesPerSample = _targetFormat.BitsPerSample / 8;
@@ -67,7 +67,6 @@ public class MultiSourceRecorder : IRecorder
             _mixedStream.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
-        await Task.Delay(1000);
         _mixedStream.Position = 0;
         return _mixedStream;
     }

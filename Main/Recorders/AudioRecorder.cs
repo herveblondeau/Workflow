@@ -1,7 +1,5 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using NAudio.Wave.Compression;
-using System.IO;
 
 namespace Main.Recorders;
 
@@ -30,21 +28,19 @@ public class AudioRecorder : IBufferableRecorder
         _audioCapture.StartRecording();
     }
 
-    public async Task<Stream> Stop()
+    public Stream Stop()
     {
         _audioCapture.StopRecording();
         Thread.Sleep(100);
-        _audioCapture.Dispose();
-        _audioBuffer.Position = 0;
 
         if (_targetFormat == _audioCapture.WaveFormat)
         {
-            await Task.CompletedTask;
+            // TODO: this hans't been tested so far because the capture uses PCM, which cannot be used to instantiate a WaveFormat
+            _audioBuffer.Position = 0;
             return _audioBuffer;
         }
         else
         {
-            await Task.CompletedTask;
             return _resample(_audioBuffer);
         }
     }

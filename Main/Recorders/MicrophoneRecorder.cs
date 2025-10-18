@@ -27,13 +27,12 @@ public class MicrophoneRecorder : IBufferableRecorder
         _micCapture.StartRecording();
     }
 
-    public async Task<Stream> Stop()
+    public Stream Stop()
     {
         _micCapture.StopRecording();
         Thread.Sleep(100);
         _micCapture.Dispose();
 
-        await Task.CompletedTask;
         _micBuffer.Position = 0;
         return _micBuffer;
     }
