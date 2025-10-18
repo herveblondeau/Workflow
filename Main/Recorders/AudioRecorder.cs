@@ -1,44 +1,33 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using NAudio.Wave.Compression;
 using System.IO;
 
 namespace Main.Recorders;
 
 public class AudioRecorder : IBufferableRecorder
 {
-    private readonly WaveFormat _targetFormat;
+    private WaveFormat _targetFormat = null!;
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioBuffer = null!;
     private AudioBufferReader _audioBufferReader = null!;
 
-    public AudioRecorder(WaveFormat targetFormat)
+    public void Start(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-    }
 
-    public Task SetUp()
-    {
         var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
         _audioCapture = new WasapiLoopbackCapture(device);
         _audioBuffer = new MemoryStream();
-        //Console.WriteLine($"System audio format: {_audioCapture.WaveFormat}");
         _audioCapture.DataAvailable += (s, e) =>
         {
             if (e.BytesRecorded > 0)
             {
-                // Console.WriteLine($"System audio received {e.BytesRecorded} bytes");
                 _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
             }
         };
 
-        return Task.CompletedTask;
-    }
-
-    public Task Start()
-    {
         _audioCapture.StartRecording();
-
-        return Task.CompletedTask;
     }
 
     public async Task<Stream> Stop()
@@ -48,13 +37,20 @@ public class AudioRecorder : IBufferableRecorder
         _audioCapture.Dispose();
         _audioBuffer.Position = 0;
 
-        await Task.CompletedTask;
-
         if (_targetFormat == _audioCapture.WaveFormat)
         {
+            await Task.CompletedTask;
             return _audioBuffer;
         }
+        else
+        {
+            await Task.CompletedTask;
+            return _resample(_audioBuffer);
+        }
+    }
 
+    private Stream _resample(MemoryStream input)
+    {
         var bufferReader = GetBufferReader();
         var resampledStream = new MemoryStream();
         int bytesPerSample = _targetFormat.BitsPerSample / 8;
@@ -79,35 +75,12 @@ public class AudioRecorder : IBufferableRecorder
         }
 
         resampledStream.Position = 0;
-
         return resampledStream;
-        //return _audioBuffer;
-        //var waveStream = new RawSourceWaveStream(_audioBuffer, _targetFormat);
-        //var bla = new RawSourceWaveStream(_audioBuffer, _audioCapture.WaveFormat);
-        //var bli = new MediaFoundationResampler(bla, _targetFormat);
-        //var resampledStream = new WaveProviderToWaveStream(resampler);
-        //return await _getResampledAudio(_audioBuffer, _targetFormat);
-    }
-
-    private async Task<Stream> _getResampledAudio(MemoryStream input, WaveFormat targetFormat)
-    {
-        input.Position = 0;
-        await Task.Delay(1000);
-
-        using (var reader = new WaveFileReader(input))
-        {
-            using (var resampler = new MediaFoundationResampler(reader, targetFormat))
-            {
-                var resampledStream = new MemoryStream();
-                WaveFileWriter.WriteWavFileToStream(resampledStream, resampler);
-                resampledStream.Position = 0;
-                return resampledStream;
-            }
-        }
     }
 
     public IBufferReader GetBufferReader()
     {
+        _audioBuffer.Position = 0;
         _audioBufferReader = new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioBuffer, _audioCapture.WaveFormat), _targetFormat)
         {
             ResamplerQuality = 60
@@ -120,6 +93,30 @@ public class AudioRecorder : IBufferableRecorder
         _audioCapture?.Dispose();
         _audioBuffer?.Dispose();
         _audioBufferReader?.Dispose();
+    }
+
+    private class AudioBufferReader2 : IBufferReader
+    {
+        private readonly BufferedWaveProvider _bufferedWaveProvider = null!;
+
+        public AudioBufferReader2(BufferedWaveProvider bufferedWaveProvider)
+        {
+            _bufferedWaveProvider = bufferedWaveProvider;
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            if (_bufferedWaveProvider is null)
+            {
+                return 0; // No data to read
+            }
+
+            return _bufferedWaveProvider.Read(buffer, offset, count);
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private class AudioBufferReader : IBufferReader

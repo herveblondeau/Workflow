@@ -9,10 +9,54 @@ using NAudio.CoreAudioApi;
 
 // PARAMETERS
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
-var language = "fr";
+var sourceLanguage = "en";
+
+// ACTUAL
+//var recorder = new AudioRecorder();
+var recorder = new MultiSourceRecorder();
+recorder.AddSource(new AudioRecorder());
+//recorder.AddSource(new MicrophoneRecorder());
+
+var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, sourceLanguage); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+
+var chatClient = new OpenRouterChatClient();
+chatClient.UseModel("google/gemini-2.5-flash-image");
+var textProcessor = new AITextTransformer(new ChatAgent(chatClient), sourceLanguage);
+textProcessor.AddInstruction("the text comes from a YouTube video")
+    .AddInstruction("please summarize the contents in 300 words max")
+;
+
+var speechToTextProcessor = new SpeechToTextProcessor();
+speechToTextProcessor
+    .UseRecorder(recorder)
+    .UseTranscriber(transcriber)
+    .UseTextTransformer(textProcessor);
+
+Console.WriteLine(await speechToTextProcessor.Process(waveFormat));
+return;
+
+// TEST
+/*
+var recorder = new AudioRecorder();
+recorder.Start(waveFormat);
+Console.Write($"Recording started... Press ENTER to stop...");
+Console.ReadLine();
+var recordedStream = recorder.Stop();
+//using (var writer = new WaveFileWriter("temp.wav", waveFormat))
+//{
+//    recordedStream.CopyTo(writer);
+//}
+//recorder.Dispose();
+
+recordedStream.Position = 0;
+
+var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, sourceLanguage); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+Console.WriteLine(await transcriber.Transcribe(recordedStream));
+
+return;
+*/
 
 /*
-// SETUP
 var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 var audioCapture = new WasapiLoopbackCapture(device);
 var audioBuffer = new MemoryStream();
@@ -36,84 +80,9 @@ Thread.Sleep(100);
 audioCapture.Dispose();
 audioBuffer.Position = 0;
 
-
-
 using (var writer = new WaveFileWriter("temp.wav", audioCapture.WaveFormat))
 {
     audioBuffer.CopyTo(writer);
 }
-
-
 return;
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Recorder
-var recorder = new AudioRecorder(waveFormat);
-await recorder.SetUp();
-await recorder.Start();
-Console.Write($"Recording started... Press ENTER to stop...");
-Console.ReadLine();
-var recordedStream = await recorder.Stop();
-using (var writer = new WaveFileWriter("temp.wav", waveFormat))
-{
-    recordedStream.CopyTo(writer);
-}
-recorder.Dispose();
-
-return;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Transcriber
-var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, language); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-
-// Text processor
-//var textProcessor = new EmptyTextTransformer();
-var chatClient = new OpenRouterChatClient();
-chatClient.UseModel("google/gemini-2.5-flash-image");
-var textProcessor = new AITextTransformer(new ChatAgent(chatClient), "fr");
-textProcessor.AddInstruction("le texte vient d'une vidéo YouTube")
-    .AddInstruction("il faut résumer le contenu en 300 mots maximum")
-;
-
-//
-var speechToTextProcessor = new SpeechToTextProcessor();
-speechToTextProcessor
-    .UseRecorder(recorder)
-    .UseTranscriber(transcriber)
-    .UseTextTransformer(textProcessor);
-
-var result = await speechToTextProcessor.Process();
-Console.WriteLine(result);

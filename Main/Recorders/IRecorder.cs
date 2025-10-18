@@ -1,9 +1,10 @@
+using NAudio.Wave;
+
 namespace Main.Recorders;
 
 public interface IRecorder : IDisposable
 {
-    Task SetUp();
-    Task Start();
+    void Start(WaveFormat targetFormat);
     Task<Stream> Stop();
 }
 public interface IBufferableRecorder : IRecorder

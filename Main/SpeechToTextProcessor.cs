@@ -1,6 +1,7 @@
 ﻿using Main.Transcribers;
 using Main.Recorders;
 using Main.TextTransformers;
+using NAudio.Wave;
 
 namespace Main;
 
@@ -28,7 +29,7 @@ public class SpeechToTextProcessor
         return this;
     }
 
-    public async Task<string> Process()
+    public async Task<string> Process(WaveFormat waveFormat)
     {
         if (_recorder is null)
         {
@@ -48,8 +49,7 @@ public class SpeechToTextProcessor
         using (_recorder)
         {
             // 1) RECORDING
-            await _recorder.SetUp();
-            await _recorder.Start();
+            _recorder.Start(waveFormat);
 
             Console.Write($"Recording started... Press ENTER to stop...");
             Console.ReadLine();

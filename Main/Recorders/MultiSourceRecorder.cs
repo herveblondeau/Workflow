@@ -5,30 +5,21 @@ namespace Main.Recorders;
 public class MultiSourceRecorder : IRecorder
 {
     private readonly List<IBufferableRecorder> _sources;
-    private readonly WaveFormat _format;
-    private MemoryStream _stream = null!;
+    private WaveFormat _targetFormat = null!;
+    private MemoryStream _mixedStream = null!;
 
-    public MultiSourceRecorder(WaveFormat format)
+    public MultiSourceRecorder()
     {
         _sources = new();
-        _format = format;
     }
 
-    public Task SetUp()
+    public void Start(WaveFormat targetFormat)
     {
+        _targetFormat = targetFormat;
+
         foreach (var source in _sources)
         {
-            source.SetUp();
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public async Task Start()
-    {
-        foreach (var source in _sources)
-        {
-            await source.Start();
+            source.Start(targetFormat);
         }
     }
 
@@ -45,13 +36,13 @@ public class MultiSourceRecorder : IRecorder
             await source.Stop();
         }
 
-        int bytesPerSample = _format.BitsPerSample / 8;
-        int bufferSize = _format.AverageBytesPerSecond / 10; // 100ms buffer
+        int bytesPerSample = _targetFormat.BitsPerSample / 8;
+        int bufferSize = _targetFormat.AverageBytesPerSecond / 10; // 100ms buffer
         var buffers = _sources.Select(r => new byte[bufferSize]).ToList();
         byte[] mixedBuffer = new byte[bufferSize];
-        var bufferReaders = _sources.Select(r => r.GetBufferReader());
+        var bufferReaders = _sources.Select(r => r.GetBufferReader()).ToList();
 
-        _stream = new MemoryStream();
+        _mixedStream = new MemoryStream();
         while (true)
         {
             var bytes = bufferReaders.Select((br, i) => br.Read(buffers[i], 0, bufferSize)).ToList();
@@ -73,13 +64,12 @@ public class MultiSourceRecorder : IRecorder
                 BitConverter.GetBytes(mixed).CopyTo(mixedBuffer, i);
             }
 
-            _stream.Write(mixedBuffer, 0, mixedBuffer.Length);
+            _mixedStream.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
         await Task.Delay(1000);
-
-        _stream.Position = 0;
-        return _stream;
+        _mixedStream.Position = 0;
+        return _mixedStream;
     }
 
     public void Dispose()
@@ -89,6 +79,6 @@ public class MultiSourceRecorder : IRecorder
             source.Dispose();
         }
 
-        _stream.Dispose();
+        _mixedStream.Dispose();
     }
 }

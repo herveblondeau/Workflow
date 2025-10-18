@@ -10,7 +10,7 @@ public class WhisperTranscriber : ITranscriber
     private readonly string _modelFilePath;
     private readonly WaveFormat _waveFormat;
     private readonly string _language;
-    private const string TEMPORARY_WAV_FILE_NAME = "output.wav";
+    private const string TEMPORARY_WAV_FILE_NAME = "whisper_temp.wav";
 
     public WhisperTranscriber(string modelFilePath, WaveFormat waveFormat, string language)
     {
@@ -47,7 +47,7 @@ public class WhisperTranscriber : ITranscriber
             }
         }
 
-        //File.Delete(TEMPORARY_WAV_FILE_NAME);
+        File.Delete(TEMPORARY_WAV_FILE_NAME);
 
         return transcription.ToString();
     }

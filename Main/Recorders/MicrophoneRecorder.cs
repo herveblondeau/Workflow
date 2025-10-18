@@ -4,37 +4,27 @@ namespace Main.Recorders;
 
 public class MicrophoneRecorder : IBufferableRecorder
 {
-    private readonly WaveFormat _targetFormat;
+    private WaveFormat _targetFormat = null!;
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micBuffer = null!;
     private MicrophoneBufferReader _micBufferReader = null!;
 
-    public MicrophoneRecorder(WaveFormat targetFormat)
+    public void Start(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
-    }
 
-    public Task SetUp()
-    {
         _micCapture = new WaveInEvent
         {
             DeviceNumber = 0, // Default mic
             WaveFormat = _targetFormat,
         };
         _micBuffer = new MemoryStream();
-        Console.WriteLine($"Mic format: {_micCapture.WaveFormat}");
         _micCapture.DataAvailable += (s, e) =>
         {
             _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
         };
 
-        return Task.CompletedTask;
-    }
-
-    public Task Start()
-    {
         _micCapture.StartRecording();
-        return Task.CompletedTask;
     }
 
     public async Task<Stream> Stop()
@@ -42,9 +32,9 @@ public class MicrophoneRecorder : IBufferableRecorder
         _micCapture.StopRecording();
         Thread.Sleep(100);
         _micCapture.Dispose();
-        _micBuffer.Position = 0;
 
         await Task.CompletedTask;
+        _micBuffer.Position = 0;
         return _micBuffer;
     }
 
