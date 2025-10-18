@@ -13,32 +13,37 @@ public class MicrophoneRecorder : IBufferableRecorder
     {
         _targetFormat = targetFormat;
 
+        _micBuffer = new MemoryStream();
+
         _micCapture = new WaveInEvent
         {
             DeviceNumber = 0, // Default mic
             WaveFormat = _targetFormat,
         };
-        _micBuffer = new MemoryStream();
-        _micCapture.DataAvailable += (s, e) =>
-        {
-            _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
-        };
-
+        _micCapture.DataAvailable += _micCapture_DataAvailable;
         _micCapture.StartRecording();
+    }
+
+    private void _micCapture_DataAvailable(object? sender, WaveInEventArgs e)
+    {
+        _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
     }
 
     public Stream Stop()
     {
         _micCapture.StopRecording();
-        Thread.Sleep(100);
-        _micCapture.Dispose();
+        _micCapture.DataAvailable -= _micCapture_DataAvailable;
 
         _micBuffer.Position = 0;
+
+        Thread.Sleep(100); // try to remove this
+
         return _micBuffer;
     }
 
     public IBufferReader GetBufferReader()
     {
+        _micBuffer.Position = 0;
         _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
         return _micBufferReader;
     }

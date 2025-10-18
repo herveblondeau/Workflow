@@ -15,28 +15,34 @@ public class AudioRecorder : IBufferableRecorder
         _targetFormat = targetFormat;
 
         var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-        _audioCapture = new WasapiLoopbackCapture(device);
-        _audioBuffer = new MemoryStream();
-        _audioCapture.DataAvailable += (s, e) =>
-        {
-            if (e.BytesRecorded > 0)
-            {
-                _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
-            }
-        };
 
+        _audioBuffer = new MemoryStream();
+
+        _audioCapture = new WasapiLoopbackCapture(device);
+        _audioCapture.DataAvailable += _audioCapture_DataAvailable;
         _audioCapture.StartRecording();
+    }
+
+    private void _audioCapture_DataAvailable(object? sender, WaveInEventArgs e)
+    {
+        if (e.BytesRecorded > 0)
+        {
+            _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
+        }
     }
 
     public Stream Stop()
     {
         _audioCapture.StopRecording();
-        Thread.Sleep(100);
+        _audioCapture.DataAvailable -= _audioCapture_DataAvailable;
+
+        _audioBuffer.Position = 0;
+
+        Thread.Sleep(100); // TODO: try to remove this
 
         if (_targetFormat == _audioCapture.WaveFormat)
         {
-            // TODO: this hans't been tested so far because the capture uses PCM, which cannot be used to instantiate a WaveFormat
-            _audioBuffer.Position = 0;
+            // TODO: this hasn't been tested so far because the capture uses PCM, which cannot be used to instantiate a WaveFormat
             return _audioBuffer;
         }
         else
