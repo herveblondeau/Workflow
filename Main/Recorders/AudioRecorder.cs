@@ -54,7 +54,7 @@ public class AudioRecorder : IBufferableRecorder
         var bufferReader = GetBufferReader();
         var resampledStream = new MemoryStream();
         int bytesPerSample = _targetFormat.BitsPerSample / 8;
-        int bufferSize = _targetFormat.AverageBytesPerSecond / 10; // 100ms buffer
+        int bufferSize = _targetFormat.AverageBytesPerSecond / 10; // divide by 10 = 100ms buffer
         var resampledBuffer = new byte[bufferSize];
         while (true)
         {
@@ -93,30 +93,6 @@ public class AudioRecorder : IBufferableRecorder
         _audioCapture?.Dispose();
         _audioBuffer?.Dispose();
         _audioBufferReader?.Dispose();
-    }
-
-    private class AudioBufferReader2 : IBufferReader
-    {
-        private readonly BufferedWaveProvider _bufferedWaveProvider = null!;
-
-        public AudioBufferReader2(BufferedWaveProvider bufferedWaveProvider)
-        {
-            _bufferedWaveProvider = bufferedWaveProvider;
-        }
-
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            if (_bufferedWaveProvider is null)
-            {
-                return 0; // No data to read
-            }
-
-            return _bufferedWaveProvider.Read(buffer, offset, count);
-        }
-
-        public void Dispose()
-        {
-        }
     }
 
     private class AudioBufferReader : IBufferReader

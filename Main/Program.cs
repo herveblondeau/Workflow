@@ -6,19 +6,21 @@ using Main.ChatAgents;
 using Main.ChatAgents.OpenRouter;
 using Main.Recorders;
 using NAudio.CoreAudioApi;
+using Whisper.net.Ggml;
 
 // PARAMETERS
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
 var sourceLanguage = "en";
+var transcriberModel = GgmlType.Base;
 
 // ACTUAL
-//var recorder = new AudioRecorder();
-var recorder = new MicrophoneRecorder();
+var recorder = new AudioRecorder();
+//var recorder = new MicrophoneRecorder();
 //var recorder = new MultiSourceRecorder();
 //recorder.AddSource(new AudioRecorder());
 //recorder.AddSource(new MicrophoneRecorder());
 
-var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, sourceLanguage); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), waveFormat, sourceLanguage, transcriberModel);
 
 var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");

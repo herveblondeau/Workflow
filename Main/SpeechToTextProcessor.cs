@@ -56,7 +56,6 @@ public class SpeechToTextProcessor
 
             Console.Write($"Stopping recording...");
             var recordedStream = _recorder.Stop();
-            //_recorder.Dispose();
             Console.WriteLine($" Done");
 
             // 2) TRANSCRIPTION
