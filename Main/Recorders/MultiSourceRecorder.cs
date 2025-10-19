@@ -29,13 +29,12 @@ public class MultiSourceRecorder : IRecorder
         return this;
     }
 
-    public Stream Stop()
+    public async Task<Stream> Stop()
     {
-        foreach (var source in _sources)
-        {
-            source.Stop();
-        }
+        // Wait for all sources to stop recording
+        await Task.WhenAll(_sources.Select(s => s.Stop()));
 
+        // Mix the sources into a single combined stream
         int bytesPerSample = _targetFormat.BitsPerSample / 8;
         int bufferSize = _targetFormat.AverageBytesPerSecond / 10; // 100ms buffer
         var buffers = _sources.Select(r => new byte[bufferSize]).ToList();

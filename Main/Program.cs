@@ -14,11 +14,11 @@ var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 
 // ACTUAL
-var recorder = new AudioRecorder();
+//var recorder = new AudioRecorder();
 //var recorder = new MicrophoneRecorder();
-//var recorder = new MultiSourceRecorder();
-//recorder.AddSource(new AudioRecorder());
-//recorder.AddSource(new MicrophoneRecorder());
+var recorder = new MultiSourceRecorder();
+recorder.AddSource(new AudioRecorder());
+recorder.AddSource(new MicrophoneRecorder());
 
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), waveFormat, sourceLanguage, transcriberModel);
 

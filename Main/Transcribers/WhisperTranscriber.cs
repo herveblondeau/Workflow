@@ -51,7 +51,7 @@ public class WhisperTranscriber : ITranscriber
         }
 
         // Clean up
-        File.Delete(TEMPORARY_WAV_FILE_NAME);
+        //File.Delete(TEMPORARY_WAV_FILE_NAME);
 
         return transcription.ToString();
     }

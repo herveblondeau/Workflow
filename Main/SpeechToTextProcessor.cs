@@ -55,7 +55,7 @@ public class SpeechToTextProcessor
             Console.ReadLine();
 
             Console.Write($"Stopping recording...");
-            var recordedStream = _recorder.Stop();
+            var recordedStream = await _recorder.Stop();
             Console.WriteLine($" Done");
 
             // 2) TRANSCRIPTION

@@ -31,22 +31,23 @@ public class AudioRecorder : IBufferableRecorder
         }
     }
 
-    public Stream Stop()
+    public async Task<Stream> Stop()
     {
+        // Wait for the recording to stop
+        // Note: calling StopRecording() only requests the stoppage. We then have to wait until we know it's actually stopped
         _audioCapture.StopRecording();
+        while (_audioCapture.CaptureState != CaptureState.Stopped)
+        {
+            await Task.Delay(50);
+        }
+
+        // Clean up
         _audioCapture.DataAvailable -= _audioCapture_DataAvailable;
+        _audioCapture.Dispose();
 
+        // Resample the recorded stream to match the target format
         _audioBuffer.Position = 0;
-
-        if (_targetFormat == _audioCapture.WaveFormat)
-        {
-            // TODO: this hasn't been tested so far because the capture uses PCM, which cannot be used to instantiate a WaveFormat
-            return _audioBuffer;
-        }
-        else
-        {
-            return _resample(_audioBuffer);
-        }
+        return _resample(_audioBuffer);
     }
 
     private Stream _resample(MemoryStream input)
