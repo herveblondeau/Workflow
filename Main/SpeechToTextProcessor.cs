@@ -1,6 +1,7 @@
 ﻿using Main.Transcribers;
 using Main.Recorders;
 using Main.TextTransformers;
+using NAudio.Wave;
 
 namespace Main;
 
@@ -8,7 +9,7 @@ public class SpeechToTextProcessor
 {
     private IRecorder _recorder = null!;
     private ITranscriber _transcriber = null!;
-    private ITextTransformer _textProcessor = null!;
+    private ITextTransformer _textTransformer = null!;
 
     public SpeechToTextProcessor UseRecorder(IRecorder recorder)
     {
@@ -22,13 +23,13 @@ public class SpeechToTextProcessor
         return this;
     }
 
-    public SpeechToTextProcessor UseTextTransformer(ITextTransformer textProcessor)
+    public SpeechToTextProcessor UseTextTransformer(ITextTransformer textTransformer)
     {
-        _textProcessor = textProcessor;
+        _textTransformer = textTransformer;
         return this;
     }
 
-    public async Task<string> Process()
+    public async Task<string> Process(WaveFormat waveFormat)
     {
         if (_recorder is null)
         {
@@ -40,32 +41,38 @@ public class SpeechToTextProcessor
             throw new ArgumentNullException("Transcriber is undefined");
         }
 
-        if (_textProcessor is null)
+        if (_textTransformer is null)
         {
             throw new ArgumentNullException("Text processor is undefined");
         }
 
-        // 1) RECORDING
-        await _recorder.SetUp();
-        await _recorder.Start();
+        using (_recorder)
+        {
+            // 1) RECORDING
+            _recorder.Start(waveFormat);
 
-        var startDateTime = DateTime.Now;
-        Console.Write($"Recording started at {startDateTime:HH:mm:ss}... Press ENTER to stop...");
-        Console.ReadLine();
-        Console.WriteLine($"Stopping recording...");
-        var recordedStream = await _recorder.Stop();
-        var stopDateTime = DateTime.Now;
-        Console.WriteLine($"Recording stopped at {stopDateTime:HH:mm:ss}");
-        Console.WriteLine($"Recording duration: {(stopDateTime - startDateTime).TotalSeconds} seconds");
+            Console.Write($"Recording started... Press ENTER to stop...");
+            Console.ReadLine();
 
-        _recorder.Dispose();
+            Console.Write($"Stopping recording...");
+            var recordedStream = await _recorder.Stop();
+            Console.WriteLine($" Done");
 
-        // 2) TRANSCRIPTION
-        var transcription = await _transcriber.Transcribe(recordedStream);
-        await File.WriteAllTextAsync("transcription.txt", transcription);
+            // 2) TRANSCRIPTION
+            Console.Write($"Transcribing...");
+            var transcription = await _transcriber.Transcribe(recordedStream);
+            Console.WriteLine($" Done");
 
-        // 3) TEXT PROCESSING
-        var result = await _textProcessor.Process(transcription);
-        return result;
+            // DEBUG
+            using (var writer = new WaveFileWriter("debug_stream.wav", waveFormat)) { recordedStream.Position = 0; recordedStream.CopyTo(writer); }
+            await File.WriteAllTextAsync("debug_transcription.txt", transcription);
+
+            // 3) TEXT TRANSFORMATION
+            Console.Write($"Transforming...");
+            var result = await _textTransformer.Process(transcription);
+            Console.WriteLine($" Done");
+
+            return result;
+        }
     }
 }

@@ -1,42 +1,37 @@
 ﻿using Main;
 using NAudio.Wave;
-using Main.Recorders.MultiSource;
-using Main.Recorders.MultiSource.RecordingSources;
-using Main.Transcribers.Whisper;
-using Main.TextTransformers.Empty;
-using Main.TextTransformers.AI;
+using Main.Transcribers;
+using Main.TextTransformers;
 using Main.ChatAgents;
 using Main.ChatAgents.OpenRouter;
+using Main.Recorders;
+using Whisper.net.Ggml;
 
-// PARAMETERS
+// Setup
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
-var language = "fr";
+var sourceLanguage = "en";
+var transcriberModel = GgmlType.Base;
 
-// SETUP
-// Recorder
-var recorder = new MultiSourceRecorder(waveFormat);
-recorder.AddSource(new AudioRecordingSource(waveFormat));
+// Run
+//var recorder = new AudioRecorder();
+//var recorder = new MicrophoneRecorder();
+var recorder = new MultiSourceRecorder();
+recorder.AddSource(new WindowsAudioRecorder());
+recorder.AddSource(new WindowsMicrophoneRecorder());
 
-// Transcriber
-var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, language); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
+var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), waveFormat, sourceLanguage, transcriberModel);
 
-// Text processor
-//var textProcessor = new EmptyTextTransformer();
 var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");
-var textProcessor = new AITextTransformer(new ChatAgent(chatClient), "fr");
-textProcessor.AddInstruction("le texte vient d'une vidéo YouTube")
-    .AddInstruction("il faut supprimer les hésitations, mots parasites et tics de langage (euh..., alors... etc.)")
-    .AddInstruction("il faut résumer le contenu en 300 mots maximum")
+var textProcessor = new AITextTransformer(new ChatAgent(chatClient), sourceLanguage);
+textProcessor.AddInstruction("the text comes from a YouTube video")
+    .AddInstruction("please summarize the contents in 300 words max")
 ;
 
-//
 var speechToTextProcessor = new SpeechToTextProcessor();
 speechToTextProcessor
     .UseRecorder(recorder)
     .UseTranscriber(transcriber)
     .UseTextTransformer(textProcessor);
 
-var result = await speechToTextProcessor.Process();
-Console.WriteLine(result);
-
+Console.WriteLine(await speechToTextProcessor.Process(waveFormat));
