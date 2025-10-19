@@ -7,14 +7,13 @@ public class MicrophoneRecorder : IBufferableRecorder
 {
     private WaveFormat _targetFormat = null!;
     private WaveInEvent _micCapture = null!;
-    private MemoryStream _micBuffer = null!;
-    private MicrophoneBufferReader _micBufferReader = null!;
+    private MemoryStream _micStream = null!;
 
     public void Start(WaveFormat targetFormat)
     {
         _targetFormat = targetFormat;
 
-        _micBuffer = new MemoryStream();
+        _micStream = new MemoryStream();
 
         _micCapture = new WaveInEvent
         {
@@ -27,7 +26,7 @@ public class MicrophoneRecorder : IBufferableRecorder
 
     private void _micCapture_DataAvailable(object? sender, WaveInEventArgs e)
     {
-        _micBuffer.Write(e.Buffer, 0, e.BytesRecorded);
+        _micStream.Write(e.Buffer, 0, e.BytesRecorded);
     }
 
     public delegate void RecordingReadyHandler(object sender, StoppedEventArgs e);
@@ -42,8 +41,8 @@ public class MicrophoneRecorder : IBufferableRecorder
         _micCapture.Dispose();
 
         // Return the captured stream
-        _micBuffer.Position = 0;
-        return _micBuffer;
+        _micStream.Position = 0;
+        return _micStream;
     }
 
     private Task _waitForRecordingStopped()
@@ -63,16 +62,14 @@ public class MicrophoneRecorder : IBufferableRecorder
 
     public IBufferReader GetBufferReader()
     {
-        _micBuffer.Position = 0;
-        _micBufferReader = new MicrophoneBufferReader(new RawSourceWaveStream(_micBuffer, _targetFormat));
-        return _micBufferReader;
+        _micStream.Position = 0;
+        return new MicrophoneBufferReader(new RawSourceWaveStream(_micStream, _targetFormat));
     }
 
     public void Dispose()
     {
         _micCapture?.Dispose();
-        _micBuffer?.Dispose();
-        _micBufferReader?.Dispose();
+        _micStream?.Dispose();
     }
 
     private class MicrophoneBufferReader : IBufferReader

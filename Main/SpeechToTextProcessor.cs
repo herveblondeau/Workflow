@@ -62,7 +62,10 @@ public class SpeechToTextProcessor
             Console.Write($"Transcribing...");
             var transcription = await _transcriber.Transcribe(recordedStream);
             Console.WriteLine($" Done");
-            await File.WriteAllTextAsync("transcription.txt", transcription);
+
+            // DEBUG
+            using (var writer = new WaveFileWriter("debug_stream.wav", waveFormat)) { recordedStream.Position = 0; recordedStream.CopyTo(writer); }
+            await File.WriteAllTextAsync("debug_transcription.txt", transcription);
 
             // 3) TEXT TRANSFORMATION
             Console.Write($"Transforming...");

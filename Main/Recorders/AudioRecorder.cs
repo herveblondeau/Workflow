@@ -7,8 +7,7 @@ public class AudioRecorder : IBufferableRecorder
 {
     private WaveFormat _targetFormat = null!;
     private WasapiLoopbackCapture _audioCapture = null!;
-    private MemoryStream _audioBuffer = null!;
-    private AudioBufferReader _audioBufferReader = null!;
+    private MemoryStream _audioStream = null!;
 
     public void Start(WaveFormat targetFormat)
     {
@@ -16,7 +15,7 @@ public class AudioRecorder : IBufferableRecorder
 
         var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
-        _audioBuffer = new MemoryStream();
+        _audioStream = new MemoryStream();
 
         _audioCapture = new WasapiLoopbackCapture(device);
         _audioCapture.DataAvailable += _audioCapture_DataAvailable;
@@ -27,14 +26,14 @@ public class AudioRecorder : IBufferableRecorder
     {
         if (e.BytesRecorded > 0)
         {
-            _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
+            _audioStream.Write(e.Buffer, 0, e.BytesRecorded);
         }
     }
 
     public async Task<Stream> Stop()
     {
         // Wait for the recording to stop
-        // Note: calling StopRecording() only requests the stoppage. We then have to wait until we know it's actually stopped
+        // Note: calling StopRecording() only requests a stoppage. We have to query the object state to ensure it's actually stopped
         _audioCapture.StopRecording();
         while (_audioCapture.CaptureState != CaptureState.Stopped)
         {
@@ -46,8 +45,8 @@ public class AudioRecorder : IBufferableRecorder
         _audioCapture.Dispose();
 
         // Resample the recorded stream to match the target format
-        _audioBuffer.Position = 0;
-        return _resample(_audioBuffer);
+        _audioStream.Position = 0;
+        return _resample(_audioStream);
     }
 
     private Stream _resample(MemoryStream input)
@@ -81,19 +80,17 @@ public class AudioRecorder : IBufferableRecorder
 
     public IBufferReader GetBufferReader()
     {
-        _audioBuffer.Position = 0;
-        _audioBufferReader = new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioBuffer, _audioCapture.WaveFormat), _targetFormat)
+        _audioStream.Position = 0;
+        return new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioStream, _audioCapture.WaveFormat), _targetFormat)
         {
             ResamplerQuality = 60
         });
-        return _audioBufferReader;
     }
 
     public void Dispose()
     {
         _audioCapture?.Dispose();
-        _audioBuffer?.Dispose();
-        _audioBufferReader?.Dispose();
+        _audioStream?.Dispose();
     }
 
     private class AudioBufferReader : IBufferReader

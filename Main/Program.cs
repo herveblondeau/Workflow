@@ -5,15 +5,14 @@ using Main.TextTransformers;
 using Main.ChatAgents;
 using Main.ChatAgents.OpenRouter;
 using Main.Recorders;
-using NAudio.CoreAudioApi;
 using Whisper.net.Ggml;
 
-// PARAMETERS
+// Setup
 var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 
-// ACTUAL
+// Run
 //var recorder = new AudioRecorder();
 //var recorder = new MicrophoneRecorder();
 var recorder = new MultiSourceRecorder();
@@ -36,56 +35,3 @@ speechToTextProcessor
     .UseTextTransformer(textProcessor);
 
 Console.WriteLine(await speechToTextProcessor.Process(waveFormat));
-return;
-
-// TEST
-/*
-var recorder = new AudioRecorder();
-recorder.Start(waveFormat);
-Console.Write($"Recording started... Press ENTER to stop...");
-Console.ReadLine();
-var recordedStream = recorder.Stop();
-//using (var writer = new WaveFileWriter("temp.wav", waveFormat))
-//{
-//    recordedStream.CopyTo(writer);
-//}
-//recorder.Dispose();
-
-recordedStream.Position = 0;
-
-var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", "ggml-base.bin"), waveFormat, sourceLanguage); // model file downloadable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-Console.WriteLine(await transcriber.Transcribe(recordedStream));
-
-return;
-*/
-
-/*
-var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-var audioCapture = new WasapiLoopbackCapture(device);
-var audioBuffer = new MemoryStream();
-//Console.WriteLine($"System audio format: {_audioCapture.WaveFormat}");
-audioCapture.DataAvailable += (s, e) =>
-{
-    if (e.BytesRecorded > 0)
-    {
-        // Console.WriteLine($"System audio received {e.BytesRecorded} bytes");
-        audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
-    }
-};
-
-audioCapture.StartRecording();
-
-Console.Write($"Recording started... Press ENTER to stop...");
-Console.ReadLine();
-
-audioCapture.StopRecording();
-Thread.Sleep(100);
-audioCapture.Dispose();
-audioBuffer.Position = 0;
-
-using (var writer = new WaveFileWriter("temp.wav", audioCapture.WaveFormat))
-{
-    audioBuffer.CopyTo(writer);
-}
-return;
-*/
