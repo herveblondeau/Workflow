@@ -3,7 +3,7 @@ using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class AudioRecorder : IBufferableRecorder
+public class WindowsAudioRecorder : IBufferableRecorder
 {
     private WaveFormat _targetFormat = null!;
     private WasapiLoopbackCapture _audioCapture = null!;

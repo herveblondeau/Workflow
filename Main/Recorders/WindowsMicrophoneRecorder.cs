@@ -1,9 +1,8 @@
-using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class MicrophoneRecorder : IBufferableRecorder
+public class WindowsMicrophoneRecorder : IBufferableRecorder
 {
     private WaveFormat _targetFormat = null!;
     private WaveInEvent _micCapture = null!;

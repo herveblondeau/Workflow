@@ -16,8 +16,8 @@ var transcriberModel = GgmlType.Base;
 //var recorder = new AudioRecorder();
 //var recorder = new MicrophoneRecorder();
 var recorder = new MultiSourceRecorder();
-recorder.AddSource(new AudioRecorder());
-recorder.AddSource(new MicrophoneRecorder());
+recorder.AddSource(new WindowsAudioRecorder());
+recorder.AddSource(new WindowsMicrophoneRecorder());
 
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), waveFormat, sourceLanguage, transcriberModel);
 
