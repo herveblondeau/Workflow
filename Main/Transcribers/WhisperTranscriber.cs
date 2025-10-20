@@ -8,23 +8,22 @@ namespace Main.Transcribers;
 public class WhisperTranscriber : ITranscriber
 {
     private readonly string _modelFilePath;
-    private readonly WaveFormat _waveFormat;
     private readonly string _language;
     private readonly GgmlType _modelType;
     private const string TEMPORARY_WAV_FILE_NAME = "whisper_temp.wav";
 
-    public WhisperTranscriber(string modelFilePath, WaveFormat waveFormat, string language, GgmlType modelType = GgmlType.Base)
+    public WhisperTranscriber(string modelFilePath, string language, GgmlType modelType = GgmlType.Base)
     {
         _modelFilePath = modelFilePath;
-        _waveFormat = waveFormat;
         _language = language;
         _modelType = modelType;
     }
 
-    public async Task<string> Transcribe(Stream inputStream)
+    public async Task<string> Transcribe(Stream inputStream, WaveFormat waveFormat)
     {
         // Whisper cannot work from a Stream; it requires an actual WAV file to operate
-        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, _waveFormat))
+        inputStream.Position = 0;
+        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, waveFormat))
         {
             inputStream.CopyTo(writer);
         }

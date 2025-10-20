@@ -60,7 +60,7 @@ public class SpeechToTextProcessor
 
             // 2) TRANSCRIPTION
             Console.Write($"Transcribing...");
-            var transcription = await _transcriber.Transcribe(recordedStream);
+            var transcription = await _transcriber.Transcribe(recordedStream, waveFormat);
             Console.WriteLine($" Done");
 
             // DEBUG
