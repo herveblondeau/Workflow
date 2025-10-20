@@ -29,7 +29,7 @@ public class SpeechToTextProcessor
         return this;
     }
 
-    public async Task<string> Process(WaveFormat waveFormat)
+    public async Task<string> Process(int sampleRate, int nbChannels, int bitsPerSample)
     {
         if (_recorder is null)
         {
@@ -49,7 +49,7 @@ public class SpeechToTextProcessor
         using (_recorder)
         {
             // 1) RECORDING
-            _recorder.Start(waveFormat);
+            _recorder.Start(sampleRate, nbChannels, bitsPerSample);
 
             Console.Write($"Recording started... Press ENTER to stop...");
             Console.ReadLine();
@@ -60,11 +60,11 @@ public class SpeechToTextProcessor
 
             // 2) TRANSCRIPTION
             Console.Write($"Transcribing...");
-            var transcription = await _transcriber.Transcribe(recordedStream, waveFormat);
+            var transcription = await _transcriber.Transcribe(recordedStream, sampleRate, nbChannels, bitsPerSample);
             Console.WriteLine($" Done");
 
             // DEBUG
-            using (var writer = new WaveFileWriter("debug_stream.wav", waveFormat)) { recordedStream.Position = 0; recordedStream.CopyTo(writer); }
+            using (var writer = new WaveFileWriter("debug_stream.wav", new WaveFormat(sampleRate, bitsPerSample, nbChannels))) { recordedStream.Position = 0; recordedStream.CopyTo(writer); }
             await File.WriteAllTextAsync("debug_transcription.txt", transcription);
 
             // 3) TEXT TRANSFORMATION

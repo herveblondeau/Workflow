@@ -103,20 +103,27 @@ using System.Diagnostics;
 // }
 
 // Setup
-var waveFormat = new WaveFormat(16000, 16, 1); // 16kHz, 16-bit, mono
+int sampleRate = 16000;
+int nbChannels = 1;
+int bitsPerSample = 16;
+var waveFormat = new WaveFormat(sampleRate, nbChannels, bitsPerSample);
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 
 // Run
-var recorder = new WindowsAudioRecorder();
 //var recorder = new WindowsAudioRecorder();
-//var recorder = new LinuxAudioRecorder();
-// var recorder = new MultiSourceRecorder();
-// recorder.AddSource(new WindowsAudioRecorder());
-// recorder.AddSource(new WindowsMicrophoneRecorder());
+//var recorder = new WindowsMicrophoneRecorder();
+// var recorder = new LinuxAudioRecorder();
+// var recorder = new LinuxMicrophoneRecorder();
+
+var recorder = new MultiSourceRecorder();
+// recorder.AddSource(new LinuxAudioRecorder());
+// recorder.AddSource(new LinuxMicrophoneRecorder());
+//recorder.AddSource(new WindowsAudioRecorder());
+recorder.AddSource(new WindowsMicrophoneRecorder());
 
 var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
-//var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), waveFormat, sourceLanguage, transcriberModel);
+//var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
 
 var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");
@@ -131,4 +138,4 @@ speechToTextProcessor
     .UseTranscriber(transcriber)
     .UseTextTransformer(textProcessor);
 
-Console.WriteLine(await speechToTextProcessor.Process(waveFormat));
+Console.WriteLine(await speechToTextProcessor.Process(sampleRate, nbChannels, bitsPerSample));

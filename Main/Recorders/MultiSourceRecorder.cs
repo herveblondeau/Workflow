@@ -1,29 +1,29 @@
-﻿using NAudio.Wave;
-
-namespace Main.Recorders;
+﻿namespace Main.Recorders;
 
 public class MultiSourceRecorder : IRecorder
 {
-    private readonly List<IBufferableRecorder> _sources;
-    private WaveFormat _targetFormat = null!;
+    private readonly List<IRecorder> _sources;
     private MemoryStream _mixedStream = null!;
+    private int _bitsPerSample;
+    private int _sampleRate;
 
     public MultiSourceRecorder()
     {
         _sources = new();
     }
 
-    public void Start(WaveFormat targetFormat)
+    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        _targetFormat = targetFormat;
+        _sampleRate = sampleRate;
+        _bitsPerSample = bitsPerSample;
 
         foreach (var source in _sources)
         {
-            source.Start(targetFormat);
+            source.Start(sampleRate, nbChannels, bitsPerSample);
         }
     }
 
-    public MultiSourceRecorder AddSource(IBufferableRecorder source)
+    public MultiSourceRecorder AddSource(IRecorder source)
     {
         _sources.Add(source);
         return this;
@@ -35,11 +35,11 @@ public class MultiSourceRecorder : IRecorder
         await Task.WhenAll(_sources.Select(s => s.Stop()));
 
         // Mix the sources into a single combined stream
-        int bytesPerSample = _targetFormat.BitsPerSample / 8;
-        int bufferSize = _targetFormat.AverageBytesPerSecond / 10; // 100ms buffer
+        int bytesPerSample = _bitsPerSample / 8;
+        int bufferSize = _sampleRate * (_bitsPerSample / 8) * 1 / 10; // 100ms buffer
         var buffers = _sources.Select(r => new byte[bufferSize]).ToList();
         byte[] mixedBuffer = new byte[bufferSize];
-        var bufferReaders = _sources.Select(r => r.GetBufferReader()).ToList();
+        var bufferReaders = _sources.Select(r => r.GetOutputStream()).ToList();
 
         _mixedStream = new MemoryStream();
         while (true)
@@ -70,6 +70,12 @@ public class MultiSourceRecorder : IRecorder
         return _mixedStream;
     }
 
+    public Stream GetOutputStream()
+    {
+        _mixedStream.Position = 0;
+        return _mixedStream;
+    }
+
     public void Dispose()
     {
         foreach (var source in _sources)
@@ -77,6 +83,6 @@ public class MultiSourceRecorder : IRecorder
             source.Dispose();
         }
 
-        _mixedStream.Dispose();
+        _mixedStream?.Dispose();
     }
 }

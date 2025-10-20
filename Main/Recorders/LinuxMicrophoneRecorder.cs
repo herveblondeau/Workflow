@@ -1,9 +1,8 @@
 using OpenTK.Audio.OpenAL;
-using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class LinuxMicrophoneRecorder : IBufferableRecorder
+public class LinuxMicrophoneRecorder : IRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
@@ -12,12 +11,12 @@ public class LinuxMicrophoneRecorder : IBufferableRecorder
     // private WaveFormat _targetFormat = null!;
     // private WaveInEvent _micCapture = null!;
 
-    public void Start(WaveFormat targetFormat)
+    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         _micStream = new MemoryStream();
 
         string deviceName = ALC.GetString(ALDevice.Null, AlcGetString.CaptureDefaultDeviceSpecifier);
-        _captureDevice = ALC.CaptureOpenDevice(deviceName, 16000, ALFormat.Mono16, 4096);
+        _captureDevice = ALC.CaptureOpenDevice(deviceName, sampleRate, _getALFormat(nbChannels, bitsPerSample), 4096);
         if (_captureDevice == IntPtr.Zero)
         {
             throw new Exception("Failed to open capture device");
@@ -28,19 +27,22 @@ public class LinuxMicrophoneRecorder : IBufferableRecorder
 
         // Start capturing
         ALC.CaptureStart(_captureDevice);
+    }
 
-
-        // _targetFormat = targetFormat;
-
-        // _micStream = new MemoryStream();
-
-        // _micCapture = new WaveInEvent
-        // {
-        //     DeviceNumber = 0, // Default mic
-        //     WaveFormat = _targetFormat,
-        // };
-        // _micCapture.DataAvailable += _micCapture_DataAvailable;
-        // _micCapture.StartRecording();
+    private ALFormat _getALFormat(int nbChannels, int bitsPerSample)
+    {
+        if (nbChannels == 1)
+        {
+            return bitsPerSample == 8 ? ALFormat.Mono8 : ALFormat.Mono16;
+        }
+        else if (nbChannels == 2)
+        {
+            return bitsPerSample == 8 ? ALFormat.Stereo8 : ALFormat.Stereo16;
+        }
+        else
+        {
+            throw new NotSupportedException("Only mono and stereo are supported");
+        }
     }
 
     public async Task<Stream> Stop()
@@ -64,6 +66,12 @@ public class LinuxMicrophoneRecorder : IBufferableRecorder
         // // Return the captured stream
         // _micStream.Position = 0;
         // return _micStream;
+    }
+
+    public Stream GetOutputStream()
+    {
+        _micStream.Position = 0;
+        return _micStream;
     }
 
     public async Task _record()
@@ -101,13 +109,6 @@ public class LinuxMicrophoneRecorder : IBufferableRecorder
         }
 
         return Array.Empty<byte>();
-    }
-
-    public IBufferReader GetBufferReader()
-    {
-        throw new NotImplementedException();
-        // _micStream.Position = 0;
-        // return new MicrophoneBufferReader(new RawSourceWaveStream(_micStream, _targetFormat));
     }
 
     public void Dispose()

@@ -1,22 +1,19 @@
 using System.Diagnostics;
-using NAudio.Wave;
 
 namespace Main.Recorders;
 
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
-public class LinuxAudioRecorder : IBufferableRecorder
+public class LinuxAudioRecorder : IRecorder
 {
-    private WaveFormat _targetFormat = null!;
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;
     private Process _ffmpeg = null!;
     private MemoryStream _audioStream = null!;
 
-    public void Start(WaveFormat targetFormat)
+    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        _targetFormat = targetFormat;
 
         // Step 1: Get the default sink
         string defaultSink = RunCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
@@ -31,7 +28,7 @@ public class LinuxAudioRecorder : IBufferableRecorder
         Console.WriteLine($"Detected monitor source: {monitorSource}");
 
         // Step 3: Build FFmpeg arguments to output raw PCM to stdout
-        string ffmpegArgs = $"-f pulse -i {monitorSource} -ac 1 -ar 16000 -f wav -";
+        string ffmpegArgs = $"-f pulse -i {monitorSource} -ac {nbChannels} -ar {sampleRate} -sample_fmt s{bitsPerSample} -f wav -";
 
         Console.WriteLine("Starting recording. Press Ctrl+C to stop.");
 
@@ -104,48 +101,46 @@ public class LinuxAudioRecorder : IBufferableRecorder
 
         _audioStream.Position = 0;
         return _audioStream;
-
-        // Example: write to file
-        File.WriteAllBytes("output.wav", _audioStream.ToArray());
-        Console.WriteLine("Saved to output.wav");
     }
 
-    public IBufferReader GetBufferReader()
+    public Stream GetOutputStream()
     {
         _audioStream.Position = 0;
-        return new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioStream, new WaveFormat(44100, 2)), _targetFormat)
-        {
-            ResamplerQuality = 60
-        });
+        return _audioStream;
     }
+
+    // public IBufferReader GetBufferReader()
+    // {
+    //     throw new NotImplementedException();
+    // }
 
     public void Dispose()
     {
         _audioStream?.Dispose();
     }
 
-    private class AudioBufferReader : IBufferReader
-    {
-        private readonly MediaFoundationResampler _audioResampler = null!;
+    // private class AudioBufferReader : IBufferReader
+    // {
+    //     private readonly MediaFoundationResampler _audioResampler = null!;
 
-        public AudioBufferReader(MediaFoundationResampler audioResampler)
-        {
-            _audioResampler = audioResampler;
-        }
+    //     public AudioBufferReader(MediaFoundationResampler audioResampler)
+    //     {
+    //         _audioResampler = audioResampler;
+    //     }
 
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            if (_audioResampler is null)
-            {
-                return 0; // No data to read
-            }
+    //     public int Read(byte[] buffer, int offset, int count)
+    //     {
+    //         if (_audioResampler is null)
+    //         {
+    //             return 0; // No data to read
+    //         }
 
-            return _audioResampler.Read(buffer, offset, count);
-        }
+    //         return _audioResampler.Read(buffer, offset, count);
+    //     }
 
-        public void Dispose()
-        {
-            _audioResampler?.Dispose();
-        }
-    }
+    //     public void Dispose()
+    //     {
+    //         _audioResampler?.Dispose();
+    //     }
+    // }
 }

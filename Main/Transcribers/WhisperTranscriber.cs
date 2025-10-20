@@ -19,11 +19,10 @@ public class WhisperTranscriber : ITranscriber
         _modelType = modelType;
     }
 
-    public async Task<string> Transcribe(Stream inputStream, WaveFormat waveFormat)
+    public async Task<string> Transcribe(Stream inputStream, int sampleRate, int nbChannels, int bitsPerSample)
     {
-        // Whisper cannot work from a Stream; it requires an actual WAV file to operate
         inputStream.Position = 0;
-        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, waveFormat))
+        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, new WaveFormat(sampleRate, bitsPerSample, nbChannels)))
         {
             inputStream.CopyTo(writer);
         }

@@ -3,23 +3,20 @@ using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class WindowsAudioRecorder : IBufferableRecorder
+public class WindowsAudioRecorder : IRecorder
 {
-    private WaveFormat _targetFormat = null!;
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
 
-    public void Start(WaveFormat targetFormat)
+    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        _targetFormat = targetFormat;
-
         var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
         _audioStream = new MemoryStream();
 
         _audioCapture = new WasapiLoopbackCapture(device);
         _audioCapture.DataAvailable += _audioCapture_DataAvailable;
-        _audioCapture.WaveFormat = _targetFormat;
+        _audioCapture.WaveFormat = new WaveFormat(sampleRate, bitsPerSample, nbChannels);
         _audioCapture.StartRecording();
     }
 
@@ -79,43 +76,24 @@ public class WindowsAudioRecorder : IBufferableRecorder
     //    return resampledStream;
     //}
 
-    public IBufferReader GetBufferReader()
+    // public IBufferReader GetBufferReader()
+    // {
+    //     _audioStream.Position = 0;
+    //     return new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioStream, _audioCapture.WaveFormat), _targetFormat)
+    //     {
+    //         ResamplerQuality = 60
+    //     });
+    // }
+
+    public Stream GetOutputStream()
     {
         _audioStream.Position = 0;
-        return new AudioBufferReader(new MediaFoundationResampler(new RawSourceWaveStream(_audioStream, _audioCapture.WaveFormat), _targetFormat)
-        {
-            ResamplerQuality = 60
-        });
+        return _audioStream;
     }
 
     public void Dispose()
     {
         _audioCapture?.Dispose();
         _audioStream?.Dispose();
-    }
-
-    private class AudioBufferReader : IBufferReader
-    {
-        private readonly MediaFoundationResampler _audioResampler = null!;
-
-        public AudioBufferReader(MediaFoundationResampler audioResampler)
-        {
-            _audioResampler = audioResampler;
-        }
-
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            if (_audioResampler is null)
-            {
-                return 0; // No data to read
-            }
-
-            return _audioResampler.Read(buffer, offset, count);
-        }
-
-        public void Dispose()
-        {
-            _audioResampler?.Dispose();
-        }
     }
 }

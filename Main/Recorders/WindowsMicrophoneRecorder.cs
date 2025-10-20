@@ -2,22 +2,19 @@ using NAudio.Wave;
 
 namespace Main.Recorders;
 
-public class WindowsMicrophoneRecorder : IBufferableRecorder
+public class WindowsMicrophoneRecorder : IRecorder
 {
-    private WaveFormat _targetFormat = null!;
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
 
-    public void Start(WaveFormat targetFormat)
+    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        _targetFormat = targetFormat;
-
         _micStream = new MemoryStream();
 
         _micCapture = new WaveInEvent
         {
             DeviceNumber = 0, // Default mic
-            WaveFormat = _targetFormat,
+            WaveFormat = new WaveFormat(sampleRate, bitsPerSample, nbChannels),
         };
         _micCapture.DataAvailable += _micCapture_DataAvailable;
         _micCapture.StartRecording();
@@ -59,40 +56,21 @@ public class WindowsMicrophoneRecorder : IBufferableRecorder
         return tcs.Task;
     }
 
-    public IBufferReader GetBufferReader()
+    // public IBufferReader GetBufferReader()
+    // {
+    //     _micStream.Position = 0;
+    //     return new MicrophoneBufferReader(new RawSourceWaveStream(_micStream, _targetFormat));
+    // }
+
+    public Stream GetOutputStream()
     {
         _micStream.Position = 0;
-        return new MicrophoneBufferReader(new RawSourceWaveStream(_micStream, _targetFormat));
+        return _micStream;
     }
 
     public void Dispose()
     {
         _micCapture?.Dispose();
         _micStream?.Dispose();
-    }
-
-    private class MicrophoneBufferReader : IBufferReader
-    {
-        private readonly RawSourceWaveStream _micRaw = null!;
-
-        public MicrophoneBufferReader(RawSourceWaveStream micRaw)
-        {
-            _micRaw = micRaw;
-        }
-
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            if (_micRaw == null || _micRaw.Length == 0)
-            {
-                return 0; // No data to read
-            }
-
-            return _micRaw.Read(buffer, offset, count);
-        }
-
-        public void Dispose()
-        {
-            _micRaw?.Dispose();
-        }
     }
 }
