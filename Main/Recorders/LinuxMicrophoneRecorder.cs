@@ -8,9 +8,6 @@ public class LinuxMicrophoneRecorder : IRecorder
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
 
-    // private WaveFormat _targetFormat = null!;
-    // private WaveInEvent _micCapture = null!;
-
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         _micStream = new MemoryStream();
@@ -54,27 +51,16 @@ public class LinuxMicrophoneRecorder : IRecorder
 
         await Task.Delay(100); // Give some time for the recording to stop
 
-        return _micStream;
-
-        // // Wait for the recording to stop
-        // await _waitForRecordingStopped();
-
-        // // Clean up
-        // _micCapture.DataAvailable -= _micCapture_DataAvailable;
-        // _micCapture.Dispose();
-
-        // // Return the captured stream
-        // _micStream.Position = 0;
-        // return _micStream;
+        return GetRecordedStream();
     }
 
-    public Stream GetOutputStream()
+    public Stream GetRecordedStream()
     {
         _micStream.Position = 0;
         return _micStream;
     }
 
-    public async Task _record()
+    private async Task _record()
     {
         while (!_cancellationTokenSource.Token.IsCancellationRequested)
         {
@@ -86,7 +72,6 @@ public class LinuxMicrophoneRecorder : IRecorder
             else
             {
                 await Task.Delay(10);
-                // Thread.Sleep(10);
             }
         }
     }
@@ -113,7 +98,6 @@ public class LinuxMicrophoneRecorder : IRecorder
 
     public void Dispose()
     {
-        // _micCapture?.Dispose();
-        // _micStream?.Dispose();
+        _micStream?.Dispose();
     }
 }

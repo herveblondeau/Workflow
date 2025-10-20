@@ -21,6 +21,8 @@ public class MultiSourceRecorder : IRecorder
         {
             source.Start(sampleRate, nbChannels, bitsPerSample);
         }
+
+        _mixedStream = new MemoryStream();
     }
 
     public MultiSourceRecorder AddSource(IRecorder source)
@@ -39,9 +41,8 @@ public class MultiSourceRecorder : IRecorder
         int bufferSize = _sampleRate * (_bitsPerSample / 8) * 1 / 10; // 100ms buffer
         var buffers = _sources.Select(r => new byte[bufferSize]).ToList();
         byte[] mixedBuffer = new byte[bufferSize];
-        var bufferReaders = _sources.Select(r => r.GetOutputStream()).ToList();
+        var bufferReaders = _sources.Select(r => r.GetRecordedStream()).ToList();
 
-        _mixedStream = new MemoryStream();
         while (true)
         {
             var bytes = bufferReaders.Select((br, i) => br.Read(buffers[i], 0, bufferSize)).ToList();
@@ -70,7 +71,7 @@ public class MultiSourceRecorder : IRecorder
         return _mixedStream;
     }
 
-    public Stream GetOutputStream()
+    public Stream GetRecordedStream()
     {
         _mixedStream.Position = 0;
         return _mixedStream;

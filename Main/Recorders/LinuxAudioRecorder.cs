@@ -5,6 +5,7 @@ namespace Main.Recorders;
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
+// - bash is also required
 public class LinuxAudioRecorder : IRecorder
 {
     private CancellationTokenSource _cts = null!;
@@ -14,39 +15,29 @@ public class LinuxAudioRecorder : IRecorder
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
+        _audioStream = new MemoryStream();
 
-        // Step 1: Get the default sink
-        string defaultSink = RunCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
+        // Get the default sink
+        string defaultSink = _runCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
         if (string.IsNullOrEmpty(defaultSink))
         {
-            Console.WriteLine("Could not detect default sink.");
-            return;
+            throw new Exception("Failed to get default sink from PulseAudio. Ensure PulseAudio is installed and running."); // TODO: consider using a custom exception
         }
-
-        // Step 2: Convert sink name to monitor source
         string monitorSource = defaultSink + ".monitor";
-        Console.WriteLine($"Detected monitor source: {monitorSource}");
 
-        // Step 3: Build FFmpeg arguments to output raw PCM to stdout
-        string ffmpegArgs = $"-f pulse -i {monitorSource} -ac {nbChannels} -ar {sampleRate} -sample_fmt s{bitsPerSample} -f wav -";
-
-        Console.WriteLine("Starting recording. Press Ctrl+C to stop.");
-
+        // Build FFmpeg arguments to output raw PCM to stdout
         _ffmpeg = new Process();
         _ffmpeg.StartInfo.FileName = "ffmpeg";
-        _ffmpeg.StartInfo.Arguments = ffmpegArgs;
+        _ffmpeg.StartInfo.Arguments = $"-f pulse -i {monitorSource} -ac {nbChannels} -ar {sampleRate} -sample_fmt s{bitsPerSample} -f wav -";
         _ffmpeg.StartInfo.UseShellExecute = false;
         _ffmpeg.StartInfo.RedirectStandardOutput = true; // redirect stdout to read stream
         _ffmpeg.StartInfo.RedirectStandardError = true;  // redirect stderr to console
         _ffmpeg.StartInfo.CreateNoWindow = true;
 
-        _ffmpeg.ErrorDataReceived += (sender, e) => { if (e.Data != null) Console.WriteLine(e.Data); };
+        // _ffmpeg.ErrorDataReceived += (sender, e) => { if (e.Data != null) Console.WriteLine(e.Data); };
+        // _ffmpeg.BeginErrorReadLine();
 
-        _ffmpeg.Start();
-        _ffmpeg.BeginErrorReadLine();
-
-        // Step 4: Read stdout in real-time into a MemoryStream
-        _audioStream = new MemoryStream();
+        // Read stdout in real-time into a MemoryStream
         _cts = new CancellationTokenSource();
 
         _readTask = Task.Run(async () =>
@@ -67,13 +58,12 @@ public class LinuxAudioRecorder : IRecorder
             }
         }, _cts.Token);
 
-        // Console.WriteLine("Recording... Press ENTER to stop.");
-        // Console.ReadLine();
+        _ffmpeg.Start();
     }
 
-    static string RunCommand(string command, string arguments)
+    private static string _runCommand(string command, string arguments)
     {
-        ProcessStartInfo psi = new ProcessStartInfo
+        var processStartInfo = new ProcessStartInfo
         {
             FileName = "/bin/bash",
             Arguments = $"-c \"{command} {arguments}\"",
@@ -82,7 +72,7 @@ public class LinuxAudioRecorder : IRecorder
             CreateNoWindow = true
         };
 
-        using (Process process = Process.Start(psi))
+        using (Process process = Process.Start(processStartInfo)!)
         {
             return process.StandardOutput.ReadToEnd();
         }
@@ -97,50 +87,17 @@ public class LinuxAudioRecorder : IRecorder
 
         await _readTask;
 
-        Console.WriteLine($"Recording stopped. Captured {_audioStream.Length} bytes of audio.");
-
-        _audioStream.Position = 0;
-        return _audioStream;
+        return GetRecordedStream();
     }
 
-    public Stream GetOutputStream()
+    public Stream GetRecordedStream()
     {
         _audioStream.Position = 0;
         return _audioStream;
     }
-
-    // public IBufferReader GetBufferReader()
-    // {
-    //     throw new NotImplementedException();
-    // }
 
     public void Dispose()
     {
         _audioStream?.Dispose();
     }
-
-    // private class AudioBufferReader : IBufferReader
-    // {
-    //     private readonly MediaFoundationResampler _audioResampler = null!;
-
-    //     public AudioBufferReader(MediaFoundationResampler audioResampler)
-    //     {
-    //         _audioResampler = audioResampler;
-    //     }
-
-    //     public int Read(byte[] buffer, int offset, int count)
-    //     {
-    //         if (_audioResampler is null)
-    //         {
-    //             return 0; // No data to read
-    //         }
-
-    //         return _audioResampler.Read(buffer, offset, count);
-    //     }
-
-    //     public void Dispose()
-    //     {
-    //         _audioResampler?.Dispose();
-    //     }
-    // }
 }

@@ -37,8 +37,7 @@ public class WindowsMicrophoneRecorder : IRecorder
         _micCapture.Dispose();
 
         // Return the captured stream
-        _micStream.Position = 0;
-        return _micStream;
+        return GetRecordedStream();
     }
 
     private Task _waitForRecordingStopped()
@@ -56,13 +55,7 @@ public class WindowsMicrophoneRecorder : IRecorder
         return tcs.Task;
     }
 
-    // public IBufferReader GetBufferReader()
-    // {
-    //     _micStream.Position = 0;
-    //     return new MicrophoneBufferReader(new RawSourceWaveStream(_micStream, _targetFormat));
-    // }
-
-    public Stream GetOutputStream()
+    public Stream GetRecordedStream()
     {
         _micStream.Position = 0;
         return _micStream;
