@@ -1,18 +1,8 @@
-using NAudio.Wave;
-
 namespace Main.Recorders;
 
 public interface IRecorder : IDisposable
 {
-    void Start(WaveFormat targetFormat);
+    void Start(int sampleRate, int nbChannels, int bitsPerSample);
     Task<Stream> Stop();
-}
-public interface IBufferableRecorder : IRecorder
-{
-    IBufferReader GetBufferReader();
-}
-
-public interface IBufferReader : IDisposable
-{
-    int Read(byte[] buffer, int offset, int count);
+    Stream GetRecordedStream();
 }
