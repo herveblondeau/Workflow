@@ -42,9 +42,6 @@ public class LinuxAudioRecorder : IRecorder
         _ffmpeg.StartInfo.RedirectStandardError = true;  // redirect stderr to console
         _ffmpeg.StartInfo.CreateNoWindow = true;
 
-        // _ffmpeg.ErrorDataReceived += (sender, e) => { if (e.Data != null) Console.WriteLine(e.Data); };
-        // _ffmpeg.BeginErrorReadLine();
-
         // Read stdout in real-time into a MemoryStream
         _cts = new CancellationTokenSource();
 

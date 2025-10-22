@@ -74,7 +74,6 @@ public class LinuxMicrophoneRecorder : IRecorder
         if (samplesAvailable > 0)
         {
             // Calculate buffer size based on format
-            // int bytesPerSample = format == ALFormat.Mono16 ? 2 : 4;
             int bytesPerSample = 2;
             byte[] buffer = new byte[samplesAvailable * bytesPerSample];
 
@@ -94,8 +93,6 @@ public class LinuxMicrophoneRecorder : IRecorder
         ALC.CaptureCloseDevice(_captureDevice);
 
         _cancellationTokenSource.Cancel();
-
-        await Task.Delay(100); // Give some time for the recording to stop
 
         State = RecorderState.Stopped;
     }
