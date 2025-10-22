@@ -12,9 +12,17 @@ public class LinuxAudioRecorder : IRecorder
     private Task _readTask = null!;
     private Process _ffmpeg = null!;
     private MemoryStream _audioStream = null!;
+    public RecorderState State { get; private set; }
+
+    public LinuxAudioRecorder()
+    {
+        State = RecorderState.Stopped;
+    }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
+        State = RecorderState.Starting;
+
         _audioStream = new MemoryStream();
 
         // Get the default sink
@@ -59,6 +67,8 @@ public class LinuxAudioRecorder : IRecorder
         }, _cts.Token);
 
         _ffmpeg.Start();
+
+        State = RecorderState.Recording;
     }
 
     private static string _runCommand(string command, string arguments)
@@ -78,8 +88,10 @@ public class LinuxAudioRecorder : IRecorder
         }
     }
 
-    public async Task<Stream> Stop()
+    public async Task Stop()
     {
+        State = RecorderState.Stopping;
+
         // Stop reading and kill FFmpeg
         _cts.Cancel();
         if (!_ffmpeg.HasExited)
@@ -87,11 +99,21 @@ public class LinuxAudioRecorder : IRecorder
 
         await _readTask;
 
-        return GetRecordedStream();
+        State = RecorderState.Stopped;
     }
 
-    public Stream GetRecordedStream()
+    public Stream? GetRecordedStream()
     {
+        if (_audioStream is null)
+        {
+            return null;
+        }
+
+        if (State != RecorderState.Stopped)
+        {
+            return null;
+        }
+
         _audioStream.Position = 0;
         return _audioStream;
     }

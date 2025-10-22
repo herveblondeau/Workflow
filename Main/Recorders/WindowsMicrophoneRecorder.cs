@@ -6,9 +6,17 @@ public class WindowsMicrophoneRecorder : IRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
+    public RecorderState State { get; private set; }
+
+    public WindowsMicrophoneRecorder()
+    {
+        State = RecorderState.Stopped;
+    }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
+        State = RecorderState.Starting;
+
         _micStream = new MemoryStream();
 
         _micCapture = new WaveInEvent
@@ -18,6 +26,8 @@ public class WindowsMicrophoneRecorder : IRecorder
         };
         _micCapture.DataAvailable += _micCapture_DataAvailable;
         _micCapture.StartRecording();
+
+        State = RecorderState.Recording;
     }
 
     private void _micCapture_DataAvailable(object? sender, WaveInEventArgs e)
@@ -27,17 +37,16 @@ public class WindowsMicrophoneRecorder : IRecorder
 
     public delegate void RecordingReadyHandler(object sender, StoppedEventArgs e);
 
-    public async Task<Stream> Stop()
+    public async Task Stop()
     {
-        // Wait for the recording to stop
+        State = RecorderState.Stopping;
+
         await _waitForRecordingStopped();
 
-        // Clean up
         _micCapture.DataAvailable -= _micCapture_DataAvailable;
         _micCapture.Dispose();
 
-        // Return the captured stream
-        return GetRecordedStream();
+        State = RecorderState.Stopped;
     }
 
     private Task _waitForRecordingStopped()
@@ -55,8 +64,18 @@ public class WindowsMicrophoneRecorder : IRecorder
         return tcs.Task;
     }
 
-    public Stream GetRecordedStream()
+    public Stream? GetRecordedStream()
     {
+        if (_micStream is null)
+        {
+            return null!;
+        }
+
+        if (State != RecorderState.Stopped)
+        {
+            return null;
+        }
+
         _micStream.Position = 0;
         return _micStream;
     }

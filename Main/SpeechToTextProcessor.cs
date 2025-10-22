@@ -55,10 +55,16 @@ public class SpeechToTextProcessor
             Console.ReadLine();
 
             Console.Write($"Stopping recording...");
-            var recordedStream = await _recorder.Stop();
+            await _recorder.Stop();
             Console.WriteLine($" Done");
 
             // 2) TRANSCRIPTION
+            var recordedStream = _recorder.GetRecordedStream();
+            if (recordedStream is null)
+            {
+                throw new Exception("No recorded stream available");
+            }
+
             Console.Write($"Transcribing...");
             var transcription = await _transcriber.Transcribe(recordedStream, sampleRate, nbChannels, bitsPerSample);
             Console.WriteLine($" Done");

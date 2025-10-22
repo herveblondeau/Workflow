@@ -7,9 +7,17 @@ public class LinuxMicrophoneRecorder : IRecorder
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
+    public RecorderState State { get; private set; }
+
+    public LinuxMicrophoneRecorder()
+    {
+        State = RecorderState.Stopped;
+    }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
+        State = RecorderState.Starting;
+
         _micStream = new MemoryStream();
 
         string deviceName = ALC.GetString(ALDevice.Null, AlcGetString.CaptureDefaultDeviceSpecifier);
@@ -21,9 +29,9 @@ public class LinuxMicrophoneRecorder : IRecorder
 
         _cancellationTokenSource = new();
         _ = _record();
-
-        // Start capturing
         ALC.CaptureStart(_captureDevice);
+
+        State = RecorderState.Recording;
     }
 
     private ALFormat _getALFormat(int nbChannels, int bitsPerSample)
@@ -40,24 +48,6 @@ public class LinuxMicrophoneRecorder : IRecorder
         {
             throw new NotSupportedException("Only mono and stereo are supported");
         }
-    }
-
-    public async Task<Stream> Stop()
-    {
-        ALC.CaptureStop(_captureDevice);
-        ALC.CaptureCloseDevice(_captureDevice);
-
-        _cancellationTokenSource.Cancel();
-
-        await Task.Delay(100); // Give some time for the recording to stop
-
-        return GetRecordedStream();
-    }
-
-    public Stream GetRecordedStream()
-    {
-        _micStream.Position = 0;
-        return _micStream;
     }
 
     private async Task _record()
@@ -94,6 +84,36 @@ public class LinuxMicrophoneRecorder : IRecorder
         }
 
         return Array.Empty<byte>();
+    }
+
+    public async Task Stop()
+    {
+        State = RecorderState.Stopping;
+
+        ALC.CaptureStop(_captureDevice);
+        ALC.CaptureCloseDevice(_captureDevice);
+
+        _cancellationTokenSource.Cancel();
+
+        await Task.Delay(100); // Give some time for the recording to stop
+
+        State = RecorderState.Stopped;
+    }
+
+    public Stream? GetRecordedStream()
+    {
+        if (_micStream is null)
+        {
+            return null;
+        }
+
+        if (State != RecorderState.Stopped)
+        {
+            return null;
+        }
+
+        _micStream.Position = 0;
+        return _micStream;
     }
 
     public void Dispose()

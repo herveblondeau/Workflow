@@ -6,14 +6,24 @@ public class MultiSourceRecorder : IRecorder
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
+    public RecorderState State { get; private set; }
 
     public MultiSourceRecorder()
     {
+        State = RecorderState.Stopped;
         _sources = new();
+    }
+
+    public MultiSourceRecorder AddSource(IRecorder source)
+    {
+        _sources.Add(source);
+        return this;
     }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
+        State = RecorderState.Starting;
+
         _sampleRate = sampleRate;
         _bitsPerSample = bitsPerSample;
 
@@ -23,29 +33,27 @@ public class MultiSourceRecorder : IRecorder
         }
 
         _mixedStream = new MemoryStream();
+
+        State = RecorderState.Recording;
     }
 
-    public MultiSourceRecorder AddSource(IRecorder source)
+    public async Task Stop()
     {
-        _sources.Add(source);
-        return this;
-    }
+        State = RecorderState.Stopping;
 
-    public async Task<Stream> Stop()
-    {
         // Wait for all sources to stop recording
-        await Task.WhenAll(_sources.Select(s => s.Stop()));
+        await Task.WhenAll(_sources.Select(async s => await s.Stop()));
 
         // Mix the sources into a single combined stream
         int bytesPerSample = _bitsPerSample / 8;
         int bufferSize = _sampleRate * (_bitsPerSample / 8) * 1 / 10; // 100ms buffer
         var buffers = _sources.Select(r => new byte[bufferSize]).ToList();
         byte[] mixedBuffer = new byte[bufferSize];
-        var bufferReaders = _sources.Select(r => r.GetRecordedStream()).ToList();
+        var streams = _sources.Select(r => r.GetRecordedStream()).ToList();
 
         while (true)
         {
-            var bytes = bufferReaders.Select((br, i) => br.Read(buffers[i], 0, bufferSize)).ToList();
+            var bytes = streams.Select((s, i) => s!.Read(buffers[i], 0, bufferSize)).ToList();
             if (bytes.All(b => b == 0))
                 break;
 
@@ -64,15 +72,24 @@ public class MultiSourceRecorder : IRecorder
                 BitConverter.GetBytes(mixed).CopyTo(mixedBuffer, i);
             }
 
-            _mixedStream.Write(mixedBuffer, 0, mixedBuffer.Length);
+            _mixedStream!.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
-        _mixedStream.Position = 0;
-        return _mixedStream;
+        State = RecorderState.Stopped;
     }
 
-    public Stream GetRecordedStream()
+    public Stream? GetRecordedStream()
     {
+        if (_mixedStream is null)
+        {
+            return null;
+        }
+
+        if (State != RecorderState.Stopped)
+        {
+            return null;
+        }
+
         _mixedStream.Position = 0;
         return _mixedStream;
     }

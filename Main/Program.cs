@@ -16,23 +16,24 @@ var transcriberModel = GgmlType.Base;
 // Run
 //var recorder = new WindowsAudioRecorder();
 //var recorder = new WindowsMicrophoneRecorder();
-// var recorder = new LinuxAudioRecorder();
+var recorder = new LinuxAudioRecorder();
 // var recorder = new LinuxMicrophoneRecorder();
 
-var recorder = new MultiSourceRecorder();
+// var recorder = new MultiSourceRecorder();
 // recorder.AddSource(new LinuxAudioRecorder());
 // recorder.AddSource(new LinuxMicrophoneRecorder());
 //recorder.AddSource(new WindowsAudioRecorder());
-recorder.AddSource(new WindowsMicrophoneRecorder());
+// recorder.AddSource(new WindowsMicrophoneRecorder());
 
-var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
-//var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+// var transcriber = new WhisperTranscriber(Path.Combine("d:/Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
 
 var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");
 var textProcessor = new AITextTransformer(new ChatAgent(chatClient), sourceLanguage);
 textProcessor.AddInstruction("This is a transcription of an audio recording.")
     .AddInstruction("Can you write a summary of the main points discussed in the recording?")
+    .AddInstruction("The summary should be concise and to the point (maximum 200 words)")
 ;
 
 var speechToTextProcessor = new SpeechToTextProcessor();
