@@ -73,8 +73,7 @@ public class YouTubeAudioDownloader : IDownloader
     private async Task<Stream> _downloadViaYtDlp(string videoUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
     {
         // Create a temporary file for yt-dlp to write to
-        // var tempFile = Path.GetTempFileName() + ".wav";
-        var tempFile ="/home/tigrou/tmp/temp.wav";
+        var tempFile = $"{Path.GetTempFileName()}.mp3";
 
         // Build process info
         var psi = new ProcessStartInfo
@@ -82,7 +81,7 @@ public class YouTubeAudioDownloader : IDownloader
             FileName = "yt-dlp",
             // -f bestaudio: pick best available audio
             // -o: output file path
-            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" -o \"{tempFile}\" {videoUrl}",
+            Arguments = $"-x --audio-format mp3 --extractor-args \"youtube:player-client=android,web\" -o \"{tempFile}\" {videoUrl}",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,
