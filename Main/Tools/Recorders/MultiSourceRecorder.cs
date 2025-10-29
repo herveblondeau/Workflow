@@ -1,20 +1,34 @@
-﻿namespace Main.Recorders;
+﻿namespace Main.Tools.Recorders;
 
-public class MultiSourceRecorder : IRecorder
+public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, IStreamRecorder
 {
-    private readonly List<IRecorder> _sources;
+    private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
-    public RecorderState State { get; private set; }
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
 
     public MultiSourceRecorder()
     {
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
         _sources = new();
     }
 
-    public MultiSourceRecorder AddSource(IRecorder source)
+    public override async Task<Stream> ProcessAsync(MultiSourceRecorderParams input, CancellationToken cancellationToken = default)
+    {
+        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+
+        if (WaitForStopSignal is not null)
+        {
+            await WaitForStopSignal.Invoke(cancellationToken);
+        }
+
+        await Stop();
+        return GetRecordedStream()!;
+    }
+
+
+    public MultiSourceRecorder AddSource(IStreamRecorder source)
     {
         _sources.Add(source);
         return this;
@@ -22,7 +36,7 @@ public class MultiSourceRecorder : IRecorder
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = RecorderState.Starting;
+        State = ToolState.Starting;
 
         _sampleRate = sampleRate;
         _bitsPerSample = bitsPerSample;
@@ -34,12 +48,12 @@ public class MultiSourceRecorder : IRecorder
 
         _mixedStream = new MemoryStream();
 
-        State = RecorderState.Recording;
+        State = ToolState.Running;
     }
 
     public async Task Stop()
     {
-        State = RecorderState.Stopping;
+        State = ToolState.Stopping;
 
         // Wait for all sources to stop recording
         await Task.WhenAll(_sources.Select(async s => await s.Stop()));
@@ -75,7 +89,7 @@ public class MultiSourceRecorder : IRecorder
             _mixedStream!.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
 
     public Stream? GetRecordedStream()
@@ -85,7 +99,7 @@ public class MultiSourceRecorder : IRecorder
             return null;
         }
 
-        if (State != RecorderState.Stopped)
+        if (State != ToolState.Idle)
         {
             return null;
         }
@@ -104,3 +118,5 @@ public class MultiSourceRecorder : IRecorder
         _mixedStream?.Dispose();
     }
 }
+
+public record MultiSourceRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

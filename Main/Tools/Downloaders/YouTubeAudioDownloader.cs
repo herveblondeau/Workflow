@@ -3,28 +3,26 @@ using Main.Extensions;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
 
-namespace Main.Downloaders;
+namespace Main.Tools.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeAudioDownloader : IDownloader
+public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Stream>, IDisposable
 {
-    public DownloaderState State { get; private set; }
-
     public YouTubeAudioDownloader()
     {
-        State = DownloaderState.Stopped;
+        State = ToolState.Idle;
     }
 
-    public async Task<Stream> Download(string sourceUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
+    public override async Task<Stream> ProcessAsync(YouTubeAudioDownloaderParams input, CancellationToken cancellationToken = default)
     {
-        State = DownloaderState.Downloading;
+        State = ToolState.Running;
 
         Stream? downloadedStream = null;
         Exception? innerException = null;
         try
         {
-            downloadedStream = await _downloadViaYoutubeExplode(sourceUrl, targetSampleRate, targetNbChannels, targetBitsPerSample);
+            downloadedStream = await _downloadViaYoutubeExplode(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
         }
         catch (Exception ex)
         {
@@ -34,7 +32,7 @@ public class YouTubeAudioDownloader : IDownloader
         try
         {
             innerException = null;
-            downloadedStream = await _downloadViaYtDlp(sourceUrl, targetSampleRate, targetNbChannels, targetBitsPerSample);
+            downloadedStream = await _downloadViaYtDlp(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
         }
         catch (Exception ex)
         {
@@ -52,9 +50,9 @@ public class YouTubeAudioDownloader : IDownloader
         }
 
         // Resample to target format
-        var resampledStream = await downloadedStream.ResampleToPcmAsync(targetSampleRate, targetNbChannels, targetBitsPerSample);
+        var resampledStream = await downloadedStream.ResampleToPcmAsync(input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
 
-        State = DownloaderState.Stopped;
+        State = ToolState.Idle;
 
         return resampledStream;
     }
@@ -121,3 +119,5 @@ public class YouTubeAudioDownloader : IDownloader
     }
 
 }
+
+public record YouTubeAudioDownloaderParams(string Url, int TargetSampleRate, int TargetNbChannels, int TargetBitsPerSample);

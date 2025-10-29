@@ -1,27 +1,40 @@
 using System.Diagnostics;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
 // - bash is also required
-public class LinuxAudioRecorder : IRecorder
+public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IStreamRecorder
 {
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;
     private Process _ffmpeg = null!;
     private MemoryStream _audioStream = null!;
-    public RecorderState State { get; private set; }
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
 
     public LinuxAudioRecorder()
     {
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
 
-    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public override async Task<Stream> ProcessAsync(LinuxAudioRecorderParams input, CancellationToken cancellationToken = default)
     {
-        State = RecorderState.Starting;
+        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+
+        if (WaitForStopSignal is not null)
+        {
+            await WaitForStopSignal.Invoke(cancellationToken);
+        }
+
+        await Stop();
+        return GetRecordedStream()!;
+    }
+
+   public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    {
+        State = ToolState.Starting;
 
         _audioStream = new MemoryStream();
 
@@ -65,7 +78,7 @@ public class LinuxAudioRecorder : IRecorder
 
         _ffmpeg.Start();
 
-        State = RecorderState.Recording;
+        State = ToolState.Running;
     }
 
     private static string _runCommand(string command, string arguments)
@@ -87,7 +100,7 @@ public class LinuxAudioRecorder : IRecorder
 
     public async Task Stop()
     {
-        State = RecorderState.Stopping;
+        State = ToolState.Stopping;
 
         // Stop reading and kill FFmpeg
         _cts.Cancel();
@@ -96,7 +109,7 @@ public class LinuxAudioRecorder : IRecorder
 
         await _readTask;
 
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
 
     public Stream? GetRecordedStream()
@@ -106,7 +119,7 @@ public class LinuxAudioRecorder : IRecorder
             return null;
         }
 
-        if (State != RecorderState.Stopped)
+        if (State != ToolState.Idle)
         {
             return null;
         }
@@ -120,3 +133,5 @@ public class LinuxAudioRecorder : IRecorder
         _audioStream?.Dispose();
     }
 }
+
+public record LinuxAudioRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

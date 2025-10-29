@@ -1,9 +1,7 @@
-namespace Main.Recorders;
+namespace Main;
 
-public interface IRecorder : IDisposable
+public interface IStreamRecorder : IDisposable
 {
-    public RecorderState State { get; }
-
     void Start(int sampleRate, int nbChannels, int bitsPerSample);
     Task Stop();
     Stream? GetRecordedStream();

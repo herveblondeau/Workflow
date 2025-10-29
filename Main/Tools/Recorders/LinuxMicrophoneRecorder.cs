@@ -1,22 +1,36 @@
 using OpenTK.Audio.OpenAL;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class LinuxMicrophoneRecorder : IRecorder
+public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, Stream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
-    public RecorderState State { get; private set; }
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
 
     public LinuxMicrophoneRecorder()
     {
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
+
+    public override async Task<Stream> ProcessAsync(LinuxMicrophoneRecorderParams input, CancellationToken cancellationToken = default)
+    {
+        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+
+        if (WaitForStopSignal is not null)
+        {
+            await WaitForStopSignal.Invoke(cancellationToken);
+        }
+
+        await Stop();
+        return GetRecordedStream()!;
+    }
+
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = RecorderState.Starting;
+        State = ToolState.Starting;
 
         _micStream = new MemoryStream();
 
@@ -31,7 +45,7 @@ public class LinuxMicrophoneRecorder : IRecorder
         _ = _record();
         ALC.CaptureStart(_captureDevice);
 
-        State = RecorderState.Recording;
+        State = ToolState.Running;
     }
 
     private ALFormat _getALFormat(int nbChannels, int bitsPerSample)
@@ -85,16 +99,18 @@ public class LinuxMicrophoneRecorder : IRecorder
         return Array.Empty<byte>();
     }
 
-    public async Task Stop()
+    public Task Stop()
     {
-        State = RecorderState.Stopping;
+        State = ToolState.Stopping;
 
         ALC.CaptureStop(_captureDevice);
         ALC.CaptureCloseDevice(_captureDevice);
 
         _cancellationTokenSource.Cancel();
 
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
+
+        return Task.CompletedTask;
     }
 
     public Stream? GetRecordedStream()
@@ -104,7 +120,7 @@ public class LinuxMicrophoneRecorder : IRecorder
             return null;
         }
 
-        if (State != RecorderState.Stopped)
+        if (State != ToolState.Idle)
         {
             return null;
         }
@@ -118,3 +134,5 @@ public class LinuxMicrophoneRecorder : IRecorder
         _micStream?.Dispose();
     }
 }
+
+public record LinuxMicrophoneRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

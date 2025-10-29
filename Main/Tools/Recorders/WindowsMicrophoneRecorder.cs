@@ -1,21 +1,35 @@
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class WindowsMicrophoneRecorder : IRecorder
+public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParams, Stream>, IStreamRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
-    public RecorderState State { get; private set; }
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
 
     public WindowsMicrophoneRecorder()
     {
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
+
+    public override async Task<Stream> ProcessAsync(WindowsMicrophoneRecorderParams input, CancellationToken cancellationToken = default)
+    {
+        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+
+        if (WaitForStopSignal is not null)
+        {
+            await WaitForStopSignal.Invoke(cancellationToken);
+        }
+
+        await Stop();
+        return GetRecordedStream()!;
+    }
+
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = RecorderState.Starting;
+        State = ToolState.Starting;
 
         _micStream = new MemoryStream();
 
@@ -27,7 +41,7 @@ public class WindowsMicrophoneRecorder : IRecorder
         _micCapture.DataAvailable += _micCapture_DataAvailable;
         _micCapture.StartRecording();
 
-        State = RecorderState.Recording;
+        State = ToolState.Running;
     }
 
     private void _micCapture_DataAvailable(object? sender, WaveInEventArgs e)
@@ -39,14 +53,14 @@ public class WindowsMicrophoneRecorder : IRecorder
 
     public async Task Stop()
     {
-        State = RecorderState.Stopping;
+        State = ToolState.Stopping;
 
         await _waitForRecordingStopped();
 
         _micCapture.DataAvailable -= _micCapture_DataAvailable;
         _micCapture.Dispose();
 
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
 
     private Task _waitForRecordingStopped()
@@ -71,7 +85,7 @@ public class WindowsMicrophoneRecorder : IRecorder
             return null!;
         }
 
-        if (State != RecorderState.Stopped)
+        if (State != ToolState.Idle)
         {
             return null;
         }
@@ -86,3 +100,5 @@ public class WindowsMicrophoneRecorder : IRecorder
         _micStream?.Dispose();
     }
 }
+
+public record WindowsMicrophoneRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

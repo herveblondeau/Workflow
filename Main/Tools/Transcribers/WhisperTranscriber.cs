@@ -3,9 +3,9 @@ using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
 
-namespace Main.Transcribers;
+namespace Main.Tools.Transcribers;
 
-public class WhisperTranscriber : ITranscriber
+public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
 {
     private readonly string _modelFilePath;
     private readonly string _language;
@@ -19,12 +19,12 @@ public class WhisperTranscriber : ITranscriber
         _modelType = modelType;
     }
 
-    public async Task<string> Transcribe(Stream inputStream, int sampleRate, int nbChannels, int bitsPerSample)
+    public override async Task<string> ProcessAsync(WhisperTranscriberParams input, CancellationToken cancellationToken = default)
     {
-        inputStream.Position = 0;
-        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, new WaveFormat(sampleRate, bitsPerSample, nbChannels)))
+        input.Stream.Position = 0;
+        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, new WaveFormat(input.SampleRate, input.BitsPerSample, input.NbChannels)))
         {
-            inputStream.CopyTo(writer);
+            input.Stream.CopyTo(writer);
         }
 
         // Initialize Whisper
@@ -62,3 +62,5 @@ public class WhisperTranscriber : ITranscriber
         await modelStream.CopyToAsync(fileWriter);
     }
 }
+
+public record WhisperTranscriberParams(Stream Stream, int SampleRate, int NbChannels, int BitsPerSample);

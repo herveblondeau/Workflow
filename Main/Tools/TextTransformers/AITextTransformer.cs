@@ -1,8 +1,8 @@
 ﻿using Main.ChatAgents;
 
-namespace Main.TextTransformers;
+namespace Main.Tools.TextTransformers;
 
-public class AITextTransformer : ITextTransformer
+public class AITextTransformer : ToolBase<string, string>
 {
     private readonly ChatAgent _chatAgent;
     private readonly string _language;
@@ -23,7 +23,7 @@ public class AITextTransformer : ITextTransformer
         return this;
     }
 
-    public async Task<string> Process(string input)
+    public override async Task<string> ProcessAsync(string input, CancellationToken cancellationToken = default)
     {
         _chatAgent.InitializeConversation();
 

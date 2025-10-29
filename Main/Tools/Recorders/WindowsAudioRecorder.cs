@@ -1,22 +1,35 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class WindowsAudioRecorder : IRecorder
+public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>, IStreamRecorder
 {
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
-    public RecorderState State { get; private set; }
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
 
     public WindowsAudioRecorder()
     {
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
+    }
+
+    public override async Task<Stream> ProcessAsync(WindowsAudioRecorderParams input, CancellationToken cancellationToken = default)
+    {
+        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+
+        if (WaitForStopSignal is not null)
+        {
+            await WaitForStopSignal.Invoke(cancellationToken);
+        }
+
+        await Stop();
+        return GetRecordedStream()!;
     }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = RecorderState.Starting;
+        State = ToolState.Starting;
 
         var device = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
 
@@ -27,7 +40,7 @@ public class WindowsAudioRecorder : IRecorder
         _audioCapture.WaveFormat = new WaveFormat(sampleRate, bitsPerSample, nbChannels);
         _audioCapture.StartRecording();
 
-        State = RecorderState.Recording;
+        State = ToolState.Running;
     }
 
     private void _audioCapture_DataAvailable(object? sender, WaveInEventArgs e)
@@ -40,7 +53,7 @@ public class WindowsAudioRecorder : IRecorder
 
     public async Task Stop()
     {
-        State = RecorderState.Stopping;
+        State = ToolState.Stopping;
 
         // Wait for the recording to stop
         // Note: calling StopRecording() only requests a stoppage. We have to query the object state to ensure it's actually stopped
@@ -54,7 +67,7 @@ public class WindowsAudioRecorder : IRecorder
         _audioCapture.DataAvailable -= _audioCapture_DataAvailable;
         _audioCapture.Dispose();
 
-        State = RecorderState.Stopped;
+        State = ToolState.Idle;
     }
 
     public Stream? GetRecordedStream()
@@ -64,7 +77,7 @@ public class WindowsAudioRecorder : IRecorder
             return null;
         }
 
-        if (State != RecorderState.Stopped)
+        if (State != ToolState.Idle)
         {
             return null;
         }
@@ -79,3 +92,5 @@ public class WindowsAudioRecorder : IRecorder
         _audioStream?.Dispose();
     }
 }
+
+public record WindowsAudioRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);
