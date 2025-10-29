@@ -52,6 +52,48 @@ int bitsPerSample = 16;
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 
+var recorder = new MultiSourceRecorder();
+recorder.WaitForStopSignal = async (cancellationToken) =>
+{
+    Console.Write("Recording started... Press ENTER to stop...");
+    await Task.Run(() =>
+    {
+        Console.ReadLine();
+        Console.WriteLine("Stopping recording...");
+    }, cancellationToken);
+};
+recorder.AddSource(new LinuxAudioRecorder());
+recorder.AddSource(new LinuxMicrophoneRecorder());
+
+var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+
+var chatClient = new OpenRouterChatClient();
+chatClient.UseModel("google/gemini-2.5-flash-image");
+var textProcessor = new AITextTransformer(new ChatAgent(chatClient), sourceLanguage);
+textProcessor.AddInstruction("This is a transcription of a Youtube video")
+    .AddInstruction("Can you write a summary of the contents?")
+    .AddInstruction("The summary should be concise and to the point (maximum 300 words)")
+;
+
+var stream = await recorder.ProcessAsync(new MultiSourceRecorderParams(16000, 1, 16));
+Console.WriteLine("Done");
+Console.Write("Transcribing...");
+var transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
+Console.WriteLine("Done");
+Console.WriteLine(transcription);
+Console.Write("Processing...");
+var finalText = await textProcessor.ProcessAsync(transcription);
+Console.WriteLine("Done");
+Console.WriteLine(finalText);
+return;
+
+/*
+int sampleRate = 16000;
+int nbChannels = 1;
+int bitsPerSample = 16;
+var sourceLanguage = "en";
+var transcriberModel = GgmlType.Base;
+
 var videoUrl = "https://www.youtube.com/watch?v=etgH5EWHwlc";
 var downloader = new YouTubeAudioDownloader();
 
@@ -66,16 +108,17 @@ textProcessor.AddInstruction("This is a transcription of a Youtube video")
 ;
 
 Console.Write("Downloading...");
-var stream = await downloader.Download(videoUrl, sampleRate, nbChannels, bitsPerSample);
+var stream = await downloader.ProcessAsync(new(videoUrl, sampleRate, nbChannels, bitsPerSample));
 Console.WriteLine("Done");
 Console.Write("Transcribing...");
-var transcription = await transcriber.Transcribe(stream, sampleRate, nbChannels, bitsPerSample);
+var transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
 Console.WriteLine("Done");
 Console.Write("Processing...");
-var finalText = await textProcessor.Process(transcription);
+var finalText = await textProcessor.ProcessAsync(transcription);
 Console.WriteLine("Done");
 Console.WriteLine(finalText);
 return;
+*/
 
 /*
 // Setup
