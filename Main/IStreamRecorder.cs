@@ -1,6 +1,6 @@
 namespace Main;
 
-public interface IRecorder : IDisposable
+public interface IStreamRecorder : IDisposable
 {
     void Start(int sampleRate, int nbChannels, int bitsPerSample);
     Task Stop();

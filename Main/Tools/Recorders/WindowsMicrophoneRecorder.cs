@@ -1,8 +1,8 @@
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParams, Stream>, IRecorder
+public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParams, Stream>, IStreamRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;

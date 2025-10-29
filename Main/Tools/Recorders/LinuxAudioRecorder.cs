@@ -1,12 +1,12 @@
 using System.Diagnostics;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
 // - bash is also required
-public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IRecorder
+public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IStreamRecorder
 {
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;

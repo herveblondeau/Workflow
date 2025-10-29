@@ -1,8 +1,8 @@
-﻿namespace Main.Recorders;
+﻿namespace Main.Tools.Recorders;
 
-public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, IRecorder
+public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, IStreamRecorder
 {
-    private readonly List<IRecorder> _sources;
+    private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
@@ -28,7 +28,7 @@ public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, 
     }
 
 
-    public MultiSourceRecorder AddSource(IRecorder source)
+    public MultiSourceRecorder AddSource(IStreamRecorder source)
     {
         _sources.Add(source);
         return this;

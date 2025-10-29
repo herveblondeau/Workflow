@@ -1,18 +1,17 @@
 ﻿using Main;
-using Main.Transcribers;
-using Main.TextTransformers;
 using Main.ChatAgents;
 using Main.ChatAgents.OpenRouter;
-using Main.Recorders;
 using Whisper.net.Ggml;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
-using Main.Downloaders;
 using System.Diagnostics;
 using System.Text.Json;
 using Main.Extensions;
 using System.Net;
 using System.Text.Json.Serialization;
+using Main.Tools.Recorders;
+using Main.Tools.Transcribers;
+using Main.Tools.TextTransformers;
 
 /*
 // Setup

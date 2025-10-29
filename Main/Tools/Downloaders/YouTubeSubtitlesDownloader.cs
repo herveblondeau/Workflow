@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Main.Downloaders;
+namespace Main.Tools.Downloaders;
 
 // Downloader that fetches subtitles from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH

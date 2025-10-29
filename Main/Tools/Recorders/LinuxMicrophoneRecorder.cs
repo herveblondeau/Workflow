@@ -1,8 +1,8 @@
 using OpenTK.Audio.OpenAL;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, Stream>, IRecorder
+public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, Stream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;

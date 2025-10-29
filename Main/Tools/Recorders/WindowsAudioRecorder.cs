@@ -1,9 +1,9 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-namespace Main.Recorders;
+namespace Main.Tools.Recorders;
 
-public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>, IRecorder
+public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>, IStreamRecorder
 {
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;

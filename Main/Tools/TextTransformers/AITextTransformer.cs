@@ -1,6 +1,6 @@
 ﻿using Main.ChatAgents;
 
-namespace Main.TextTransformers;
+namespace Main.Tools.TextTransformers;
 
 public class AITextTransformer : ToolBase<string, string>
 {
