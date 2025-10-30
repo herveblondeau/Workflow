@@ -10,7 +10,6 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
     private readonly string _modelFilePath;
     private readonly string _language;
     private readonly GgmlType _modelType;
-    private const string TEMPORARY_WAV_FILE_NAME = "whisper_temp.wav";
 
     public WhisperTranscriber(string modelFilePath, string language, GgmlType modelType = GgmlType.Base)
     {
@@ -21,8 +20,10 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
 
     public override async Task<string> ProcessAsync(WhisperTranscriberParams input, CancellationToken cancellationToken = default)
     {
+        var tempFile = $"{Path.GetTempFileName()}.wav";
+
         input.Stream.Position = 0;
-        using (var writer = new WaveFileWriter(TEMPORARY_WAV_FILE_NAME, new WaveFormat(input.SampleRate, input.BitsPerSample, input.NbChannels)))
+        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(input.SampleRate, input.BitsPerSample, input.NbChannels)))
         {
             input.Stream.CopyTo(writer);
         }
@@ -40,7 +41,7 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
 
         // Transcribe
         StringBuilder transcription = new();
-        using (var fileStream = File.OpenRead(TEMPORARY_WAV_FILE_NAME))
+        using (var fileStream = File.OpenRead(tempFile))
         {
             await foreach (var result in processor.ProcessAsync(fileStream))
             {
@@ -49,7 +50,10 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
         }
 
         // Clean up
-        File.Delete(TEMPORARY_WAV_FILE_NAME);
+        if (File.Exists(tempFile))
+        {
+            File.Delete(tempFile);
+        }
 
         return transcription.ToString();
     }
