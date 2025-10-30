@@ -6,12 +6,30 @@ using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
 using System.Diagnostics;
 using System.Text.Json;
-using Main.Extensions;
 using System.Net;
 using System.Text.Json.Serialization;
 using Main.Tools.Recorders;
 using Main.Tools.Transcribers;
 using Main.Tools.TextTransformers;
+using Main.Tools.Downloaders;
+
+int sampleRate = 16000;
+int nbChannels = 1;
+int bitsPerSample = 16;
+var sourceLanguage = "en";
+var transcriberModel = GgmlType.Base;
+
+var recorder = new YouTubeAudioDownloader();
+var stream = await recorder.ProcessAsync(new YouTubeAudioDownloaderParams("https://www.youtube.com/watch?v=sth9cqKcdek", sampleRate, nbChannels, bitsPerSample));
+var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+
+Console.WriteLine("Done");
+Console.Write("Transcribing...");
+var transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
+Console.WriteLine("Done");
+Console.WriteLine();
+Console.WriteLine(transcription);
+return;
 
 /*
 // Setup
@@ -45,6 +63,7 @@ Console.WriteLine(finalText);
 return;
 */
 
+/*
 int sampleRate = 16000;
 int nbChannels = 1;
 int bitsPerSample = 16;
@@ -85,6 +104,7 @@ var finalText = await textProcessor.ProcessAsync(transcription);
 Console.WriteLine("Done");
 Console.WriteLine(finalText);
 return;
+*/
 
 /*
 int sampleRate = 16000;
