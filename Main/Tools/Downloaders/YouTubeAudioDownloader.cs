@@ -1,7 +1,4 @@
 using System.Diagnostics;
-using Main.Extensions;
-using YoutubeExplode;
-using YoutubeExplode.Videos.Streams;
 
 namespace Main.Tools.Downloaders;
 
@@ -18,68 +15,27 @@ public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Str
     {
         State = ToolState.Running;
 
-        Stream? downloadedStream = null;
-        Exception? innerException = null;
-        try
-        {
-            downloadedStream = await _downloadViaYoutubeExplode(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
-        }
-        catch (Exception ex)
-        {
-            innerException = ex;
-        }
-
-        try
-        {
-            innerException = null;
-            downloadedStream = await _downloadViaYtDlp(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
-        }
-        catch (Exception ex)
-        {
-            innerException = ex;
-        }
-
-        if (innerException is not null)
-        {
-            throw new Exception("Cannot download", innerException);
-        }
-
+        Stream? downloadedStream = await _downloadViaYtDlp(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
         if (downloadedStream is null)
         {
             throw new Exception("No stream was downloaded");
         }
 
-        // Resample to target format
-        var resampledStream = await downloadedStream.ResampleToPcmAsync(input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
-
         State = ToolState.Idle;
 
-        return resampledStream;
-    }
-
-    private async Task<Stream> _downloadViaYoutubeExplode(string videoUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
-    {
-        YoutubeClient _youtubeClient = new();
-
-        // Download audio stream
-        var video = await _youtubeClient.Videos.GetAsync(videoUrl);
-        var streamManifest = await _youtubeClient.Videos.Streams.GetManifestAsync(video.Id);
-        var streamInfo = streamManifest.GetAudioOnlyStreams().GetWithHighestBitrate();
-        return await _youtubeClient.Videos.Streams.GetAsync(streamInfo);
+        return downloadedStream;
     }
 
     private async Task<Stream> _downloadViaYtDlp(string videoUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
     {
         // Create a temporary file for yt-dlp to write to
-        var tempFile = $"{Path.GetTempFileName()}.mp3";
+        var tempFile = $"{Path.GetTempFileName()}.wav";
 
         // Build process info
         var psi = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            // -f bestaudio: pick best available audio
-            // -o: output file path
-            Arguments = $"-x --audio-format mp3 --extractor-args \"youtube:player-client=android,web\" -o \"{tempFile}\" {videoUrl}",
+            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {targetSampleRate} -ac {targetNbChannels} -sample_fmt s{targetBitsPerSample}\" -o \"{tempFile}\"",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,
