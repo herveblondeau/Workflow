@@ -58,6 +58,8 @@ public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IS
         // Read stdout in real-time into a MemoryStream
         _cts = new CancellationTokenSource();
 
+        _ffmpeg.Start();
+
         _readTask = Task.Run(async () =>
         {
             byte[] buffer = new byte[4096];
@@ -75,8 +77,6 @@ public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IS
                 // Expected when user stops recording; exit gracefully
             }
         }, _cts.Token);
-
-        _ffmpeg.Start();
 
         State = ToolState.Running;
     }
