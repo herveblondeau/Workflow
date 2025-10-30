@@ -62,11 +62,12 @@ public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Str
             var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.DeleteOnClose);
             return fileStream;
         }
-        catch
+        finally
         {
             if (File.Exists(tempFile))
+            {
                 File.Delete(tempFile);
-            throw;
+            }
         }
     }
 
