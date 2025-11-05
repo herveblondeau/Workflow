@@ -2,20 +2,27 @@ using NAudio.Wave;
 
 namespace Main.Tools.Recorders;
 
-public class WindowsMicrophoneRecorder : ITool<RecorderParams, Stream>, IStreamRecorder
+public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public WindowsMicrophoneRecorder()
+    public WindowsMicrophoneRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
         // State = ToolState.Idle;
+
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public async Task<Stream> Transform(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {

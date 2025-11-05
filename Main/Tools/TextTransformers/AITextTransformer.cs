@@ -7,20 +7,14 @@ public class AITextTransformer : ITool<string, string>
     private readonly ChatAgent _chatAgent;
     private readonly string _language;
 
-    private readonly List<string> _instructions;
+    private readonly IEnumerable<string> _instructions;
 
-    public AITextTransformer(ChatAgent chatAgent, string language)
+    public AITextTransformer(ChatAgent chatAgent, string language, IEnumerable<string> instructions)
     {
         _chatAgent = chatAgent;
         _language = language;
 
-        _instructions = new();
-    }
-
-    public AITextTransformer AddInstruction(string instruction)
-    {
-        _instructions.Add(instruction);
-        return this;
+        _instructions = instructions;
     }
 
     public async Task<string> Transform(string input, CancellationToken cancellationToken = default)

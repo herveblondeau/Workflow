@@ -3,21 +3,28 @@ using OpenTK.Audio.OpenAL;
 
 namespace Main.Tools.Recorders;
 
-public class LinuxMicrophoneRecorder : ITool<RecorderParams, Stream>, IStreamRecorder
+public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public LinuxMicrophoneRecorder()
+    public LinuxMicrophoneRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
         // State = ToolState.Idle;
+
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public async Task<Stream> Transform(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {

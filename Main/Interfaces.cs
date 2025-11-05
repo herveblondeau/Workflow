@@ -6,6 +6,11 @@ public interface ITool<TIn, TOut>
     Task<TOut> Transform(TIn input, CancellationToken cancellationToken = default);
 }
 
+public struct Unit
+{
+    public static readonly Unit Value = new Unit();
+}
+
 // public enum ToolState
 // {
 //     Idle,
@@ -13,6 +18,14 @@ public interface ITool<TIn, TOut>
 //     Running,
 //     Stopping,
 // }
+
+public class GenerateTool : ITool<Unit, string>
+{
+    public Task<string> Transform(Unit _, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult("GENERATED");
+    }
+}
 
 public class ReverserTool : ITool<string, string>
 {
@@ -57,6 +70,15 @@ public class Pipeline<TIn, TOut> : IPipeline<TIn, TOut>, ITool<TIn, TOut>
     private Pipeline(Func<TIn, CancellationToken, Task<TOut>> executor) { _executor = executor; }
 
     public Task<TOut> Execute(TIn input, CancellationToken cancellationToken = default) => _executor(input, cancellationToken);
+
+    // Convenience overload for no-input pipelines
+    public Task<TOut> Execute(CancellationToken cancellationToken = default)
+    {
+        if (typeof(TIn) != typeof(Unit))
+            throw new InvalidOperationException("This overload can only be used for pipelines with Unit input.");
+        return _executor((TIn)(object)Unit.Value, cancellationToken);
+    }
+
     public Task<TOut> Transform(TIn input, CancellationToken cancellationToken = default) => _executor(input, cancellationToken);
 
     // Add another tool to the pipeline
@@ -74,4 +96,8 @@ public class Pipeline<TIn, TOut> : IPipeline<TIn, TOut>, ITool<TIn, TOut>
 public static class Pipeline
 {
     public static Pipeline<TIn, TOut> Add<TIn, TOut>(ITool<TIn, TOut> tool) => Pipeline<TIn, TOut>.Create(tool);
+
+    // For tools that don't take input (i.e., ITool<Unit, TOut>)
+    public static Pipeline<Unit, TOut> Start<TOut>(ITool<Unit, TOut> tool)
+        => Pipeline<Unit, TOut>.Create(tool);
 }

@@ -3,20 +3,26 @@ using NAudio.Wave;
 
 namespace Main.Tools.Recorders;
 
-public class WindowsAudioRecorder : ITool<RecorderParams, Stream>, IStreamRecorder
+public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public WindowsAudioRecorder()
+    public WindowsAudioRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
         // State = ToolState.Idle;
     }
 
-    public async Task<Stream> Transform(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {

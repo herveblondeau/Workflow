@@ -1,22 +1,29 @@
 ﻿namespace Main.Tools.Recorders;
 
-public class MultiSourceRecorder : ITool<RecorderParams, Stream>, IStreamRecorder
+public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public MultiSourceRecorder()
+    public MultiSourceRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
         // State = ToolState.Idle;
+
         _sources = new();
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public async Task<Stream> Transform(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {
