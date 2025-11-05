@@ -4,16 +4,16 @@ namespace Main.Tools.Downloaders;
 
 // Downloader that fetches subtitles from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeSubtitlesDownloader : ToolBase<YouTubeSubtitlesDownloaderParams, string>
+public class YouTubeSubtitlesDownloader : ITool<YouTubeSubtitlesDownloaderParams, string>
 {
     public YouTubeSubtitlesDownloader()
     {
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
     }
 
-    public override async Task<string> ProcessAsync(YouTubeSubtitlesDownloaderParams input, CancellationToken cancellationToken = default)
+    public async Task<string> Transform(YouTubeSubtitlesDownloaderParams input, CancellationToken cancellationToken = default)
     {
-        State = ToolState.Running;
+        // State = ToolState.Running;
 
         string content = await _downloadViaYtDlp(input.Url, input.Language);
         if (string.IsNullOrEmpty(content))
@@ -23,7 +23,7 @@ public class YouTubeSubtitlesDownloader : ToolBase<YouTubeSubtitlesDownloaderPar
 
         var cleanedContent = _cleanSubtitlesContent(content);
 
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
 
         return cleanedContent;
     }

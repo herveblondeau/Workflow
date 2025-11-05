@@ -6,7 +6,7 @@ namespace Main.Tools.Recorders;
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
 // - bash is also required
-public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
+public class LinuxAudioRecorder : ITool<RecorderParams, Stream>, IStreamRecorder
 {
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;
@@ -16,10 +16,10 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
 
     public LinuxAudioRecorder()
     {
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
     }
 
-    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -34,7 +34,7 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
 
    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = ToolState.Starting;
+        // State = ToolState.Starting;
 
         _audioStream = new MemoryStream();
 
@@ -78,7 +78,7 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
             }
         }, _cts.Token);
 
-        State = ToolState.Running;
+        // State = ToolState.Running;
     }
 
     private static string _runCommand(string command, string arguments)
@@ -100,7 +100,7 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
 
     public async Task Stop()
     {
-        State = ToolState.Stopping;
+        // State = ToolState.Stopping;
 
         // Stop reading and kill FFmpeg
         _cts.Cancel();
@@ -109,7 +109,7 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
 
         await _readTask;
 
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
     }
 
     public Stream? GetRecordedStream()
@@ -119,10 +119,10 @@ public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecor
             return null;
         }
 
-        if (State != ToolState.Idle)
-        {
-            return null;
-        }
+        // if (State != ToolState.Idle)
+        // {
+        //     return null;
+        // }
 
         _audioStream.Position = 0;
         return _audioStream;

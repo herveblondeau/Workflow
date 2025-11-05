@@ -2,7 +2,7 @@
 
 namespace Main.Tools.TextTransformers;
 
-public class AITextTransformer : ToolBase<string, string>
+public class AITextTransformer : ITool<string, string>
 {
     private readonly ChatAgent _chatAgent;
     private readonly string _language;
@@ -23,7 +23,7 @@ public class AITextTransformer : ToolBase<string, string>
         return this;
     }
 
-    public override async Task<string> ProcessAsync(string input, CancellationToken cancellationToken = default)
+    public async Task<string> Transform(string input, CancellationToken cancellationToken = default)
     {
         _chatAgent.InitializeConversation();
 

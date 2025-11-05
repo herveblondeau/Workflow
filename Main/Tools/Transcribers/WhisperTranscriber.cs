@@ -5,27 +5,33 @@ using Whisper.net.Ggml;
 
 namespace Main.Tools.Transcribers;
 
-public class WhisperTranscriber : ToolBase<TranscriberParams, string>
+public class WhisperTranscriber : ITool<Stream, string>
 {
     private readonly string _modelFilePath;
     private readonly string _language;
     private readonly GgmlType _modelType;
+    public int SampleRate { get; private set; }
+    public int BitsPerSample { get; private set; }
+    public int NbChannels { get; private set; }
 
-    public WhisperTranscriber(string modelFilePath, string language, GgmlType modelType = GgmlType.Base)
+    public WhisperTranscriber(int sampleRate, int bitsPerSample, int nbChannels, string modelFilePath, string language, GgmlType modelType = GgmlType.Base)
     {
+        SampleRate = sampleRate;
+        BitsPerSample = bitsPerSample;
+        NbChannels = nbChannels;
         _modelFilePath = modelFilePath;
         _language = language;
         _modelType = modelType;
     }
 
-    public override async Task<string> ProcessAsync(TranscriberParams input, CancellationToken cancellationToken = default)
+    public async Task<string> Transform(Stream input, CancellationToken cancellationToken = default)
     {
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
-        input.Stream.Position = 0;
-        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(input.SampleRate, input.BitsPerSample, input.NbChannels)))
+        input.Position = 0;
+        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(SampleRate, BitsPerSample, NbChannels)))
         {
-            input.Stream.CopyTo(writer);
+            input.CopyTo(writer);
         }
 
         // Initialize Whisper
