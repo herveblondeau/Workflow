@@ -5,7 +5,7 @@ using Whisper.net.Ggml;
 
 namespace Main.Tools.Transcribers;
 
-public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
+public class WhisperTranscriber : ToolBase<TranscriberParams, string>
 {
     private readonly string _modelFilePath;
     private readonly string _language;
@@ -18,7 +18,7 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
         _modelType = modelType;
     }
 
-    public override async Task<string> ProcessAsync(WhisperTranscriberParams input, CancellationToken cancellationToken = default)
+    public override async Task<string> ProcessAsync(TranscriberParams input, CancellationToken cancellationToken = default)
     {
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
@@ -66,5 +66,3 @@ public class WhisperTranscriber : ToolBase<WhisperTranscriberParams, string>
         await modelStream.CopyToAsync(fileWriter);
     }
 }
-
-public record WhisperTranscriberParams(Stream Stream, int SampleRate, int NbChannels, int BitsPerSample);

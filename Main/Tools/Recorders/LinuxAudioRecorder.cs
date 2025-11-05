@@ -6,7 +6,7 @@ namespace Main.Tools.Recorders;
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
 // - bash is also required
-public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IStreamRecorder
+public class LinuxAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
 {
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;
@@ -19,7 +19,7 @@ public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IS
         State = ToolState.Idle;
     }
 
-    public override async Task<Stream> ProcessAsync(LinuxAudioRecorderParams input, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -133,5 +133,3 @@ public class LinuxAudioRecorder : ToolBase<LinuxAudioRecorderParams, Stream>, IS
         _audioStream?.Dispose();
     }
 }
-
-public record LinuxAudioRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

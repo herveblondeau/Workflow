@@ -3,7 +3,7 @@ using NAudio.Wave;
 
 namespace Main.Tools.Recorders;
 
-public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>, IStreamRecorder
+public class WindowsAudioRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
 {
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
@@ -14,7 +14,7 @@ public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>
         State = ToolState.Idle;
     }
 
-    public override async Task<Stream> ProcessAsync(WindowsAudioRecorderParams input, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -92,5 +92,3 @@ public class WindowsAudioRecorder : ToolBase<WindowsAudioRecorderParams, Stream>
         _audioStream?.Dispose();
     }
 }
-
-public record WindowsAudioRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

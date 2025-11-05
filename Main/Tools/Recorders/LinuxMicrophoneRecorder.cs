@@ -2,7 +2,7 @@ using OpenTK.Audio.OpenAL;
 
 namespace Main.Tools.Recorders;
 
-public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, Stream>, IStreamRecorder
+public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
@@ -14,7 +14,7 @@ public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, S
         State = ToolState.Idle;
     }
 
-    public override async Task<Stream> ProcessAsync(LinuxMicrophoneRecorderParams input, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -134,5 +134,3 @@ public class LinuxMicrophoneRecorder : ToolBase<LinuxMicrophoneRecorderParams, S
         _micStream?.Dispose();
     }
 }
-
-public record LinuxMicrophoneRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

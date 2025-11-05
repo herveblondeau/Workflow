@@ -2,7 +2,7 @@ using NAudio.Wave;
 
 namespace Main.Tools.Recorders;
 
-public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParams, Stream>, IStreamRecorder
+public class WindowsMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
@@ -13,7 +13,7 @@ public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParam
         State = ToolState.Idle;
     }
 
-    public override async Task<Stream> ProcessAsync(WindowsMicrophoneRecorderParams input, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -100,5 +100,3 @@ public class WindowsMicrophoneRecorder : ToolBase<WindowsMicrophoneRecorderParam
         _micStream?.Dispose();
     }
 }
-
-public record WindowsMicrophoneRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

@@ -1,6 +1,6 @@
 ﻿namespace Main.Tools.Recorders;
 
-public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, IStreamRecorder
+public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
 {
     private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
@@ -14,7 +14,7 @@ public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, 
         _sources = new();
     }
 
-    public override async Task<Stream> ProcessAsync(MultiSourceRecorderParams input, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
     {
         Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
 
@@ -118,5 +118,3 @@ public class MultiSourceRecorder : ToolBase<MultiSourceRecorderParams, Stream>, 
         _mixedStream?.Dispose();
     }
 }
-
-public record MultiSourceRecorderParams(int SampleRate, int NbChannels, int BitsPerSample);

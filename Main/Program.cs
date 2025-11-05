@@ -18,17 +18,45 @@ int nbChannels = 1;
 int bitsPerSample = 16;
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
+var sourceUrl = "https://www.youtube.com/watch?v=2jH_pr8nGQU&pp=ugUEEgJlbg%3D%3D";
+string transcription;
 
-var recorder = new YouTubeAudioDownloader();
-var stream = await recorder.ProcessAsync(new YouTubeAudioDownloaderParams("https://www.youtube.com/watch?v=sth9cqKcdek", sampleRate, nbChannels, bitsPerSample));
-var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+try
+{
+    Console.Write("Downloading subtitles...");
+    var subtitlesDownloader = new YouTubeSubtitlesDownloader();
+    transcription = await subtitlesDownloader.ProcessAsync(new YouTubeSubtitlesDownloaderParams(sourceUrl, sourceLanguage), CancellationToken.None);
+    Console.WriteLine("Done");
+}
+catch
+{
+    Console.WriteLine("Failed... Falling back to audio transcription");
 
+    Console.Write("Downloading audio...");
+    var audioDownloader = new YouTubeAudioDownloader();
+    var stream = await audioDownloader.ProcessAsync(new YouTubeAudioDownloaderParams(sourceUrl, sampleRate, nbChannels, bitsPerSample));
+    Console.WriteLine("Done");
+
+    Console.Write("Transcribing...");
+    var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+    transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
+    Console.WriteLine("Done");
+}
+
+Console.Write("Processing");
+var chatClient = new OpenRouterChatClient();
+chatClient.UseModel("google/gemini-2.5-flash-image");
+var textProcessor = new AITextTransformer(new ChatAgent(chatClient), sourceLanguage);
+textProcessor.AddInstruction("This is a transcription of an audio recording.")
+    .AddInstruction("Can you write a summary of the main points discussed in the recording?")
+    .AddInstruction("The summary MUST be concise and to the point (MAXIMUM 100 words)")
+;
+var finalText = await textProcessor.ProcessAsync(transcription);
 Console.WriteLine("Done");
-Console.Write("Transcribing...");
-var transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
-Console.WriteLine("Done");
+
 Console.WriteLine();
-Console.WriteLine(transcription);
+Console.WriteLine(finalText);
+
 return;
 
 /*
@@ -80,10 +108,11 @@ recorder.WaitForStopSignal = async (cancellationToken) =>
         Console.WriteLine("Stopping recording...");
     }, cancellationToken);
 };
-recorder.AddSource(new LinuxAudioRecorder());
-recorder.AddSource(new LinuxMicrophoneRecorder());
+recorder.AddSource(new WindowsAudioRecorder());
+recorder.AddSource(new WindowsMicrophoneRecorder());
 
-var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+//var transcriber = new WhisperTranscriber(Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
+var transcriber = new WhisperTranscriber(Path.Combine("D:\\Temp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel);
 
 var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");
@@ -93,7 +122,7 @@ textProcessor.AddInstruction("This is a transcription of a Youtube video")
     .AddInstruction("The summary should be concise and to the point (maximum 300 words)")
 ;
 
-var stream = await recorder.ProcessAsync(new MultiSourceRecorderParams(16000, 1, 16));
+var stream = await recorder.ProcessAsync(new RecorderParams(16000, 1, 16));
 Console.WriteLine("Done");
 Console.Write("Transcribing...");
 var transcription = await transcriber.ProcessAsync(new(stream, sampleRate, nbChannels, bitsPerSample));
