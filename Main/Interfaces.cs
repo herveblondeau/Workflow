@@ -19,30 +19,6 @@ public struct Unit
 //     Stopping,
 // }
 
-public class GenerateTool : ITool<Unit, string>
-{
-    public Task<string> Transform(Unit _, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult("GENERATED");
-    }
-}
-
-public class ReverserTool : ITool<string, string>
-{
-    public Task<string> Transform(string input, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(string.Join("", input.Reverse()));
-    }
-}
-
-public class CounterTool : ITool<string, int>
-{
-    public Task<int> Transform(string input, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(input.Length);
-    }
-}
-
 public class MultiplierTool : ITool<int, int>
 {
     public int Multiplier { get; private set; }
