@@ -4,24 +4,39 @@ namespace Main.Tools.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Stream>, IDisposable
+public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
 {
-    public YouTubeAudioDownloader()
+    private readonly string _url;
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
+
+    public YouTubeAudioDownloader(
+        string url,
+        int targetSampleRate,
+        int targetBitsPerSample,
+        int targetNbChannels
+    )
     {
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
+
+        _url = url;
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public override async Task<Stream> ProcessAsync(YouTubeAudioDownloaderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        State = ToolState.Running;
+        // State = ToolState.Running;
 
-        Stream? downloadedStream = await _downloadViaYtDlp(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
+        Stream? downloadedStream = await _downloadViaYtDlp(_url, _targetSampleRate, _targetNbChannels, _targetBitsPerSample);
         if (downloadedStream is null)
         {
             throw new Exception("No stream was downloaded");
         }
 
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
 
         return downloadedStream;
     }
@@ -76,5 +91,3 @@ public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Str
     }
 
 }
-
-public record YouTubeAudioDownloaderParams(string Url, int TargetSampleRate, int TargetNbChannels, int TargetBitsPerSample);

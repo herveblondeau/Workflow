@@ -1,22 +1,29 @@
 ﻿namespace Main.Tools.Recorders;
 
-public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
+public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public MultiSourceRecorder()
+    public MultiSourceRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
+
         _sources = new();
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {
@@ -36,7 +43,7 @@ public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamReco
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = ToolState.Starting;
+        // State = ToolState.Starting;
 
         _sampleRate = sampleRate;
         _bitsPerSample = bitsPerSample;
@@ -48,12 +55,12 @@ public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamReco
 
         _mixedStream = new MemoryStream();
 
-        State = ToolState.Running;
+        // State = ToolState.Running;
     }
 
     public async Task Stop()
     {
-        State = ToolState.Stopping;
+        // State = ToolState.Stopping;
 
         // Wait for all sources to stop recording
         await Task.WhenAll(_sources.Select(async s => await s.Stop()));
@@ -89,7 +96,7 @@ public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamReco
             _mixedStream!.Write(mixedBuffer, 0, mixedBuffer.Length);
         }
 
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
     }
 
     public Stream? GetRecordedStream()
@@ -99,10 +106,10 @@ public class MultiSourceRecorder : ToolBase<RecorderParams, Stream>, IStreamReco
             return null;
         }
 
-        if (State != ToolState.Idle)
-        {
-            return null;
-        }
+        // if (State != ToolState.Idle)
+        // {
+        //     return null;
+        // }
 
         _mixedStream.Position = 0;
         return _mixedStream;

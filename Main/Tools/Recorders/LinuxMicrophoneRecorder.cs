@@ -1,22 +1,30 @@
+using System.Transactions;
 using OpenTK.Audio.OpenAL;
 
 namespace Main.Tools.Recorders;
 
-public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStreamRecorder
+public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private readonly int _targetSampleRate;
+    private readonly int _targetBitsPerSample;
+    private readonly int _targetNbChannels;
 
-    public LinuxMicrophoneRecorder()
+    public LinuxMicrophoneRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
     {
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
+
+        _targetSampleRate = targetSampleRate;
+        _targetBitsPerSample = targetBitsPerSample;
+        _targetNbChannels = targetNbChannels;
     }
 
-    public override async Task<Stream> ProcessAsync(RecorderParams input, CancellationToken cancellationToken = default)
+    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(input.SampleRate, input.NbChannels, input.BitsPerSample);
+        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
         if (WaitForStopSignal is not null)
         {
@@ -30,7 +38,7 @@ public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStream
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        State = ToolState.Starting;
+        // State = ToolState.Starting;
 
         _micStream = new MemoryStream();
 
@@ -45,7 +53,7 @@ public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStream
         _ = _record();
         ALC.CaptureStart(_captureDevice);
 
-        State = ToolState.Running;
+        // State = ToolState.Running;
     }
 
     private ALFormat _getALFormat(int nbChannels, int bitsPerSample)
@@ -101,14 +109,14 @@ public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStream
 
     public Task Stop()
     {
-        State = ToolState.Stopping;
+        // State = ToolState.Stopping;
 
         ALC.CaptureStop(_captureDevice);
         ALC.CaptureCloseDevice(_captureDevice);
 
         _cancellationTokenSource.Cancel();
 
-        State = ToolState.Idle;
+        // State = ToolState.Idle;
 
         return Task.CompletedTask;
     }
@@ -120,10 +128,10 @@ public class LinuxMicrophoneRecorder : ToolBase<RecorderParams, Stream>, IStream
             return null;
         }
 
-        if (State != ToolState.Idle)
-        {
-            return null;
-        }
+        // if (State != ToolState.Idle)
+        // {
+        //     return null;
+        // }
 
         _micStream.Position = 0;
         return _micStream;

@@ -2,28 +2,22 @@
 
 namespace Main.Tools.TextTransformers;
 
-public class AITextTransformer : ToolBase<string, string>
+public class AITextTransformer : ITool<string, string>
 {
     private readonly ChatAgent _chatAgent;
     private readonly string _language;
 
-    private readonly List<string> _instructions;
+    private readonly IEnumerable<string> _instructions;
 
-    public AITextTransformer(ChatAgent chatAgent, string language)
+    public AITextTransformer(ChatAgent chatAgent, string language, IEnumerable<string> instructions)
     {
         _chatAgent = chatAgent;
         _language = language;
 
-        _instructions = new();
+        _instructions = instructions;
     }
 
-    public AITextTransformer AddInstruction(string instruction)
-    {
-        _instructions.Add(instruction);
-        return this;
-    }
-
-    public override async Task<string> ProcessAsync(string input, CancellationToken cancellationToken = default)
+    public async Task<string> Transform(string input, CancellationToken cancellationToken = default)
     {
         _chatAgent.InitializeConversation();
 
