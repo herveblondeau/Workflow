@@ -1,4 +1,4 @@
-namespace Core.Abstractions.ChatAgents;
+namespace Core.Abstractions;
 
 public interface IChatAgent
 {

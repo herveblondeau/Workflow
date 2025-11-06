@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 using Core.ChatAgents.Models;
-using Core.Abstractions.ChatAgents;
+using Core.Abstractions;
 
 namespace Core.ChatAgents;
 
