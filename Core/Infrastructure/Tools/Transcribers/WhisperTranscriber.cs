@@ -2,6 +2,7 @@ using System.Text;
 using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
+using Core.Abstractions;
 
 namespace Core.Tools.Transcribers;
 

@@ -1,23 +1,4 @@
-namespace Core;
-
-public interface ITool<TIn, TOut>
-{
-    // ToolState State { get; }
-    Task<TOut> Transform(TIn input, CancellationToken cancellationToken = default);
-}
-
-public struct Unit
-{
-    public static readonly Unit Value = new Unit();
-}
-
-public enum ToolState
-{
-    Idle,
-    Starting,
-    Running,
-    Stopping,
-}
+namespace Core.Abstractions;
 
 public interface IPipeline<TIn, TOut>
 {
@@ -56,4 +37,9 @@ public static class Pipeline
 {
     public static Pipeline<TIn, TOut> Add<TIn, TOut>(ITool<TIn, TOut> tool) => Pipeline<TIn, TOut>.Create(tool);
     public static Pipeline<Unit, TOut> Add<TOut>(ITool<Unit, TOut> tool) => Pipeline<Unit, TOut>.Create(tool); // For tools that don't take input (i.e., ITool<Unit, TOut>)
+}
+
+public struct Unit
+{
+    public static readonly Unit Value = new Unit();
 }

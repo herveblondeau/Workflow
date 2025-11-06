@@ -1,3 +1,5 @@
+using Core.Abstractions;
+using Core.Infrastructure.Tools.Recorders;
 using NAudio.Wave;
 
 namespace Core.Tools.Recorders;

@@ -1,4 +1,7 @@
-﻿namespace Core.Tools.Recorders;
+﻿using Core.Abstractions;
+using Core.Infrastructure.Tools.Recorders;
+
+namespace Core.Tools.Recorders;
 
 public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
 {

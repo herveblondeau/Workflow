@@ -12,6 +12,7 @@ using Core.Tools.Recorders;
 using Core.Tools.Transcribers;
 using Core.Tools.TextTransformers;
 using Core.Tools.Downloaders;
+using Core.Abstractions;
 
 int sampleRate = 16000;
 int nbChannels = 1;
