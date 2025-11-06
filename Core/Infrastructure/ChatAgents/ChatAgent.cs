@@ -1,9 +1,10 @@
 using Microsoft.Extensions.AI;
 using Core.ChatAgents.Models;
+using Core.Abstractions.ChatAgents;
 
 namespace Core.ChatAgents;
 
-public class ChatAgent
+public class ChatAgent : IChatAgent
 {
     private readonly IChatClient _chatClient;
     private Conversation _conversation;
