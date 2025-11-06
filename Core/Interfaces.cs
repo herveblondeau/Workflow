@@ -1,4 +1,4 @@
-namespace Main;
+namespace Core;
 
 public interface ITool<TIn, TOut>
 {

@@ -1,7 +1,7 @@
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-namespace Main.Tools.Recorders;
+namespace Core.Tools.Recorders;
 
 public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
 {

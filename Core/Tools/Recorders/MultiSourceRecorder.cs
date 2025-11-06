@@ -1,4 +1,4 @@
-﻿namespace Main.Tools.Recorders;
+﻿namespace Core.Tools.Recorders;
 
 public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
 {

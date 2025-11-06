@@ -1,6 +1,6 @@
-﻿using Main;
-using Main.ChatAgents;
-using Main.ChatAgents.OpenRouter;
+﻿using Core;
+using Core.ChatAgents;
+using Core.ChatAgents.OpenRouter;
 using Whisper.net.Ggml;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
@@ -8,10 +8,10 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Net;
 using System.Text.Json.Serialization;
-using Main.Tools.Recorders;
-using Main.Tools.Transcribers;
-using Main.Tools.TextTransformers;
-using Main.Tools.Downloaders;
+using Core.Tools.Recorders;
+using Core.Tools.Transcribers;
+using Core.Tools.TextTransformers;
+using Core.Tools.Downloaders;
 
 int sampleRate = 16000;
 int nbChannels = 1;

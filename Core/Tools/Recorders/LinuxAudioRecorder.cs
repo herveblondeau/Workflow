@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Main.Tools.Recorders;
+namespace Core.Tools.Recorders;
 
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).

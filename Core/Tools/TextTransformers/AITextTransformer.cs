@@ -1,6 +1,6 @@
-﻿using Main.ChatAgents;
+﻿using Core.ChatAgents;
 
-namespace Main.Tools.TextTransformers;
+namespace Core.Tools.TextTransformers;
 
 public class AITextTransformer : ITool<string, string>
 {

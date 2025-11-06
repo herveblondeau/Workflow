@@ -1,7 +1,7 @@
 using Microsoft.Extensions.AI;
-using Main.ChatAgents.Models;
+using Core.ChatAgents.Models;
 
-namespace Main.ChatAgents;
+namespace Core.ChatAgents;
 
 public class ChatAgent
 {

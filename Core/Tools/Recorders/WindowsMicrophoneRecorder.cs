@@ -1,6 +1,6 @@
 using NAudio.Wave;
 
-namespace Main.Tools.Recorders;
+namespace Core.Tools.Recorders;
 
 public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 {

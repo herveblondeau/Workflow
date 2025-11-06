@@ -3,7 +3,7 @@ using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
 
-namespace Main.Tools.Transcribers;
+namespace Core.Tools.Transcribers;
 
 public class WhisperTranscriber : ITool<Stream, string>
 {

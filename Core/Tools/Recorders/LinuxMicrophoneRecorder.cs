@@ -1,7 +1,7 @@
 using System.Transactions;
 using OpenTK.Audio.OpenAL;
 
-namespace Main.Tools.Recorders;
+namespace Core.Tools.Recorders;
 
 public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 {

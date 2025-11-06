@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace Main.Tools.Downloaders;
+namespace Core.Tools.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH

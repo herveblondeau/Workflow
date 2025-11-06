@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 
-namespace Main.ChatAgents.Models;
+namespace Core.ChatAgents.Models;
 
 public class Conversation
 {
