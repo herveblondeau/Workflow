@@ -1,4 +1,4 @@
-namespace Core.Infrastructure.Tools.Recorders;
+namespace Core.Abstractions.Recorders;
 
 public interface IStreamRecorder : IDisposable
 {

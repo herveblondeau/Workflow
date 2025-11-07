@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Core.Abstractions;
+using Core.Abstractions.Models;
 
 namespace Core.Tools.Downloaders;
 

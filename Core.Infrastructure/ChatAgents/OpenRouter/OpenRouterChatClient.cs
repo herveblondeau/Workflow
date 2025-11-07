@@ -9,14 +9,17 @@ public class OpenRouterChatClient : IChatClient
 {
     private readonly HttpClient _httpClient;
     private string _model = null!;
+    private string _bearerToken = null!;
 
-    public OpenRouterChatClient()
+    public OpenRouterChatClient(string bearerToken)
     {
+        _bearerToken = bearerToken;
+
         _httpClient = new HttpClient()
         {
             BaseAddress = new Uri("https://openrouter.ai/api"),
         };
-        _httpClient.DefaultRequestHeaders.Add("Authorization", "Bearer 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");
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_bearerToken}");
     }
 
     public void UseModel(string model)

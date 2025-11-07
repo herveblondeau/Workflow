@@ -3,6 +3,7 @@ using Whisper.net;
 using NAudio.Wave;
 using Whisper.net.Ggml;
 using Core.Abstractions;
+using Core.Abstractions.Models;
 
 namespace Core.Tools.Transcribers;
 

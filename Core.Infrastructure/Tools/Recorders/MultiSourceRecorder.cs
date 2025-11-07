@@ -1,5 +1,5 @@
 ﻿using Core.Abstractions;
-using Core.Infrastructure.Tools.Recorders;
+using Core.Abstractions.Recorders;
 
 namespace Core.Tools.Recorders;
 

@@ -13,13 +13,14 @@ using Core.Tools.Transcribers;
 using Core.Tools.TextTransformers;
 using Core.Tools.Downloaders;
 using Core.Abstractions;
+using Core.Abstractions.Models;
 
 var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 var sourceUrl = "https://www.youtube.com/watch?v=2jH_pr8nGQU&pp=ugUEEgJlbg%3D%3D";
 
-var chatClient = new OpenRouterChatClient();
+var chatClient = new OpenRouterChatClient("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");
 chatClient.UseModel("google/gemini-2.5-flash-image");
 
 var pipeline = Pipeline
