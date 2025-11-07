@@ -14,9 +14,7 @@ using Core.Tools.TextTransformers;
 using Core.Tools.Downloaders;
 using Core.Abstractions;
 
-int sampleRate = 16000;
-int nbChannels = 1;
-int bitsPerSample = 16;
+var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
 var sourceUrl = "https://www.youtube.com/watch?v=2jH_pr8nGQU&pp=ugUEEgJlbg%3D%3D";
@@ -25,8 +23,8 @@ var chatClient = new OpenRouterChatClient();
 chatClient.UseModel("google/gemini-2.5-flash-image");
 
 var pipeline = Pipeline
-    .Add(new YouTubeAudioDownloader(sourceUrl, sampleRate, bitsPerSample, nbChannels))
-    .Add(new WhisperTranscriber(sampleRate, bitsPerSample, nbChannels, Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel))
+    .Add(new YouTubeAudioDownloader(sourceUrl, audioFormat))
+    .Add(new WhisperTranscriber(audioFormat, Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel))
     .Add(new AITextTransformer(new ChatAgent(chatClient), sourceLanguage, new List<string>
     {
         "This is a transcription of an audio recording.",

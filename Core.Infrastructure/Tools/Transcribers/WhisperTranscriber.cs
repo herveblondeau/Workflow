@@ -11,21 +11,15 @@ public class WhisperTranscriber : ITool<Stream, string>
     private readonly string _modelFilePath;
     private readonly string _language;
     private readonly GgmlType _modelType;
-    private readonly int _sourceSampleRate;
-    private readonly int _sourceBitsPerSample;
-    private readonly int _sourceNbChannels;
+    private readonly AudioFormat _audioFormat;
 
     public WhisperTranscriber(
-        int sourceSampleRate,
-        int sourceBitsPerSample,
-        int sourceNbChannels,
+        AudioFormat audioFormat,
         string modelFilePath,
         string language,
         GgmlType modelType = GgmlType.Base)
     {
-        _sourceSampleRate = sourceSampleRate;
-        _sourceBitsPerSample = sourceBitsPerSample;
-        _sourceNbChannels = sourceNbChannels;
+        _audioFormat = audioFormat;
         _modelFilePath = modelFilePath;
         _language = language;
         _modelType = modelType;
@@ -36,7 +30,7 @@ public class WhisperTranscriber : ITool<Stream, string>
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
         input.Position = 0;
-        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(_sourceSampleRate, _sourceBitsPerSample, _sourceNbChannels)))
+        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(_audioFormat.SampleRate, _audioFormat.BitsPerSample, _audioFormat.NbChannels)))
         {
             input.CopyTo(writer);
         }

@@ -8,30 +8,24 @@ namespace Core.Tools.Downloaders;
 public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
 {
     private readonly string _url;
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private readonly AudioFormat _audioFormat;
 
     public YouTubeAudioDownloader(
         string url,
-        int targetSampleRate,
-        int targetBitsPerSample,
-        int targetNbChannels
+        AudioFormat audioFormat
     )
     {
         // State = ToolState.Idle;
 
         _url = url;
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
     }
 
     public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         // State = ToolState.Running;
 
-        Stream? downloadedStream = await _downloadViaYtDlp(_url, _targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+        Stream? downloadedStream = await _downloadViaYtDlp(_url, _audioFormat);
         if (downloadedStream is null)
         {
             throw new Exception("No stream was downloaded");
@@ -42,7 +36,7 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
         return downloadedStream;
     }
 
-    private async Task<Stream> _downloadViaYtDlp(string videoUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
+    private async Task<Stream> _downloadViaYtDlp(string videoUrl, AudioFormat audioFormat)
     {
         // Create a temporary file for yt-dlp to write to
         var tempFile = $"{Path.GetTempFileName()}.wav";
@@ -51,7 +45,7 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
         var psi = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {targetSampleRate} -ac {targetNbChannels} -sample_fmt s{targetBitsPerSample}\" -o \"{tempFile}\"",
+            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,
