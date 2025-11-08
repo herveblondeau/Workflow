@@ -27,28 +27,34 @@ using Core.Infrastructure.Tools.Workflow;
 //     .Add(new Tool4())
 // ;
 
-// var sequentialTool = SequentialTool<int, int>
-//     .From(new Tool1())
-//     .Add(new Tool2())
-//     .Add(new Tool3())
-//     .Add(new Tool4())
-// ;
-
-var parallelTool = new ParallelTool<int, int>(
-    [
-        new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool4()), // needs input
-        new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool5()) // no input
-    ],
-    outputs =>
-    {
-        var n = (int)outputs[0];
-        var s = (string)outputs[1];
-        return $"{s} & {n}".Length;
-    }
+var conditionalTool = new ConditionalTool<int, string>(
+    input => input == 36,
+    new Tool5(),
+    new Tool6()
 );
+var sequentialTool = SequentialTool<int, int>
+    .From(new Tool1())
+    .Add(new Tool2())
+    .Add(new Tool3())
+    // .Add(new Tool4())
+    .Add(conditionalTool)
+;
+
+// var parallelTool = new ParallelTool<int, int>(
+//     [
+//         new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool4()), // needs input
+//         new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool5()) // no input
+//     ],
+//     outputs =>
+//     {
+//         var n = (int)outputs[0];
+//         var s = (string)outputs[1];
+//         return $"{s} & {n}".Length;
+//     }
+// );
 
 var pipeline = Pipeline
-    .Add(parallelTool)
+    .Add(sequentialTool)
 ;
 var result = await pipeline.Execute(6);
 if (result.IsFailed)
@@ -98,12 +104,19 @@ class Tool4 : ITool<int, int>
     }
 }
 
-class Tool5 : ITool<Unit, string>
+class Tool5 : ITool<int, string>
 {
-    public Task<Result<string>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
     {
-        // return Task.FromResult(Result.Fail<int>("Tool 5 failed"));
-        return Task.FromResult(Result.Ok("TEST"));
+        return Task.FromResult(Result.Ok("Result is 36"));
+    }
+}
+
+class Tool6 : ITool<int, string>
+{
+    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Result.Ok("Result is NOT 36"));
     }
 }
 
