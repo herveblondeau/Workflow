@@ -3,6 +3,30 @@ using FluentResults;
 
 namespace Core.Infrastructure.Tools.Workflow;
 
+/// <summary>
+/// Runs multiple tools in parallel, then reduces their results into a single one using a reducer
+/// Each tool:
+/// - can take as input either the same type as the parallel tool, or no input
+/// - can produce any output type; it's the reducer's job to merge them into the parallel tool's output type
+/// </summary>
+/// <example>
+/// var parallelTool = new ParallelTool<int, string>(
+///     [
+///         new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool1()), // tool that needs an input
+///         new ParallelTool<int, int>.ValueSubTool<int, string>(new Tool2()), // tool that needs an input
+///         new ParallelTool<int, int>.ValueSubTool<int, double>(new Tool3()), // tool that needs an input
+///         new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool4()) // tool with no input
+///     ],
+///     outputs =>
+///     {
+///         var myInt = (int)outputs[0];
+///         var myString = (string)outputs[1];
+///         var myDouble = (double)outputs[2];
+///         var myString2 = (string)outputs[3];
+///         return "A string computed from all output results";
+///     }
+/// );
+/// </example>
 public interface IParallelSubtool<TIn>
 {
     Task<Result<object>> Execute(TIn input, CancellationToken cancellationToken);

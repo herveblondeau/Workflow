@@ -3,6 +3,16 @@ using FluentResults;
 
 namespace Core.Infrastructure.Tools.Workflow;
 
+/// <summary>
+/// Runs multiple tools in sequence
+/// All tools must succeed for the sequence to succeed
+/// </summary>
+/// <example>
+/// var sequentialTool = SequentialTool<int, int>
+///     .From(new Tool1())
+///     .Add(new Tool2())
+///     .Add(new Tool3())
+/// </example>
 public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
 {
     private readonly Func<TIn, CancellationToken, Task<Result<TOut>>> _executor;
@@ -26,7 +36,7 @@ public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
             {
                 var intermediate = await _executor(input, cancellationToken).ConfigureAwait(false);
 
-                // stop chain on failure
+                // Stop chain on failure
                 if (intermediate.IsFailed)
                 {
                     return intermediate.ToResult<TNext>();

@@ -3,6 +3,19 @@ using FluentResults;
 
 namespace Core.Tools.Workflow;
 
+
+/// <summary>
+/// Runs multiple tools in sequence
+/// Returns the result of the first tool that succeeds
+/// Fails if all tools fail
+/// </summary>
+/// <example>
+/// var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
+/// firstSuccessfulTool
+///     .Add(new Tool1())
+///     .Add(new Tool2())
+///     .Add(new Tool3())
+/// </example>
 public class FirstSuccessfulTool<TIn, TOut> : ITool<TIn, TOut>
 {
     private List<ITool<TIn, TOut>> _tools { get; init; }

@@ -3,6 +3,16 @@ using FluentResults;
 
 namespace Core.Infrastructure.Tools.Workflow;
 
+/// <summary>
+/// Runs one of two tools depending on a condition
+/// </summary>
+/// <example>
+/// var conditionalTool = new ConditionalTool<int, string>(
+///     input => input == 42,
+///     new Tool1(),
+///     new Tool2()
+/// );
+/// </example>
 public class ConditionalTool<TIn, TOut> : ITool<TIn, TOut>
 {
     private readonly Func<TIn, bool> _predicate;
