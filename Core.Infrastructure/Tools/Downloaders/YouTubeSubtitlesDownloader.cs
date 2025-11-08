@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Core.Abstractions;
+using FluentResults;
 
 namespace Core.Tools.Downloaders;
 
@@ -18,7 +19,7 @@ public class YouTubeSubtitlesDownloader : ITool<Unit, string>
         _sourceLanguage = sourceLanguage;
     }
 
-    public async Task<string> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         // State = ToolState.Running;
 

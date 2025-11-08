@@ -1,5 +1,6 @@
 using Core.Abstractions;
 using Core.Abstractions.Recorders;
+using FluentResults;
 using OpenTK.Audio.OpenAL;
 
 namespace Core.Tools.Recorders;
@@ -23,7 +24,7 @@ public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
         _targetNbChannels = targetNbChannels;
     }
 
-    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 

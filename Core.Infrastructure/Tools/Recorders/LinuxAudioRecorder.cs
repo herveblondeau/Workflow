@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Core.Abstractions;
 using Core.Abstractions.Recorders;
+using FluentResults;
 
 namespace Core.Tools.Recorders;
 
@@ -28,7 +29,7 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         _targetNbChannels = targetNbChannels;
     }
 
-    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 
@@ -58,11 +59,12 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         // Build FFmpeg arguments to output raw PCM to stdout
         _ffmpeg = new Process();
         _ffmpeg.StartInfo.FileName = "ffmpeg";
-        _ffmpeg.StartInfo.Arguments = $"-f pulse -i {monitorSource} -ac {nbChannels} -ar {sampleRate} -sample_fmt s{bitsPerSample} -f wav -";
+        _ffmpeg.StartInfo.Arguments = $"-f pulse -i {monitorSource} -ar {sampleRate} -ac {nbChannels} -sample_fmt s{bitsPerSample} -f wav -";
         _ffmpeg.StartInfo.UseShellExecute = false;
         _ffmpeg.StartInfo.RedirectStandardOutput = true; // redirect stdout to read stream
         _ffmpeg.StartInfo.RedirectStandardError = true;  // redirect stderr to console
         _ffmpeg.StartInfo.CreateNoWindow = true;
+        _ffmpeg.EnableRaisingEvents = true;
 
         // Read stdout in real-time into a MemoryStream
         _cts = new CancellationTokenSource();
@@ -85,6 +87,10 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
             {
                 // Expected when user stops recording; exit gracefully
             }
+            // catch (InvalidOperationException)
+            // {
+            //     // Expected when user stops recording; exit gracefully
+            // }
         }, _cts.Token);
 
         // State = ToolState.Running;
@@ -112,11 +118,17 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         // State = ToolState.Stopping;
 
         // Stop reading and kill FFmpeg
+        Console.WriteLine("OK1");
         _cts.Cancel();
-        if (!_ffmpeg.HasExited)
-            _ffmpeg.Kill();
+        _ffmpeg.Kill();
+        while (!_ffmpeg.HasExited)
+        {
+            await Task.Delay(100);
+        }
+        Console.WriteLine("OK2");
 
         await _readTask;
+        Console.WriteLine("OK3");
 
         // State = ToolState.Idle;
     }

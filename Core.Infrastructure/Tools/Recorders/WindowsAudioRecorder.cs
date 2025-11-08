@@ -1,5 +1,6 @@
 using Core.Abstractions;
 using Core.Abstractions.Recorders;
+using FluentResults;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
@@ -22,7 +23,7 @@ public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         // State = ToolState.Idle;
     }
 
-    public async Task<Stream> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
 

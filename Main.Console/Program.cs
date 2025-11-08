@@ -14,6 +14,7 @@ using Core.Tools.TextTransformers;
 using Core.Tools.Downloaders;
 using Core.Abstractions;
 using Core.Abstractions.Models;
+using FluentResults;
 
 var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
 var sourceLanguage = "en";
@@ -34,7 +35,16 @@ var pipeline = Pipeline
     }))
 ;
 var result = await pipeline.Execute();
-Console.WriteLine(result);
+if (result.IsFailed)
+{
+    Console.WriteLine("Pipeline failed");
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine(error.Message);
+    }
+    return;
+}
+Console.WriteLine(result.Value);
 return;
 
 /*
