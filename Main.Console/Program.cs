@@ -15,7 +15,99 @@ using Core.Tools.Downloaders;
 using Core.Abstractions;
 using Core.Abstractions.Models;
 using FluentResults;
+using System.IO.Pipelines;
+using Core.Tools.Workflow;
+using Core.Infrastructure.Tools.Workflow;
 
+// var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
+// firstSuccessfulTool
+//     .Add(new Tool1())
+//     .Add(new Tool2())
+//     .Add(new Tool3())
+//     .Add(new Tool4())
+// ;
+
+// var sequentialTool = SequentialTool<int, int>
+//     .From(new Tool1())
+//     .Add(new Tool2())
+//     .Add(new Tool3())
+//     .Add(new Tool4())
+// ;
+
+var parallelTool = new ParallelTool<int, int>(
+    [
+        new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool4()), // needs input
+        new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool5()) // no input
+    ],
+    outputs =>
+    {
+        var n = (int)outputs[0];
+        var s = (string)outputs[1];
+        return $"{s} & {n}".Length;
+    }
+);
+
+var pipeline = Pipeline
+    .Add(parallelTool)
+;
+var result = await pipeline.Execute(6);
+if (result.IsFailed)
+{
+    Console.WriteLine("Pipeline failed");
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine(error);
+    }
+    return;
+}
+Console.WriteLine($"Result: {result.Value}");
+
+class Tool1 : ITool<int, int>
+{
+    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+        return Task.FromResult(Result.Ok(input));
+    }
+}
+
+class Tool2 : ITool<int, int>
+{
+    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 2 failed"));
+        return Task.FromResult(Result.Ok(input * 2));
+    }
+}
+
+class Tool3 : ITool<int, int>
+{
+    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
+        return Task.FromResult(Result.Ok(input * 3));
+    }
+}
+
+class Tool4 : ITool<int, int>
+{
+    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 4 failed"));
+        return Task.FromResult(Result.Ok(input * 4));
+    }
+}
+
+class Tool5 : ITool<Unit, string>
+{
+    public Task<Result<string>> Transform(Unit _, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 5 failed"));
+        return Task.FromResult(Result.Ok("TEST"));
+    }
+}
+
+/*
 var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
@@ -46,6 +138,7 @@ if (result.IsFailed)
 }
 Console.WriteLine(result.Value);
 return;
+*/
 
 /*
 int sampleRate = 16000;
