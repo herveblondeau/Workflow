@@ -1,53 +1,41 @@
 using System.Diagnostics;
-using Core.Abstractions;
-using Core.Abstractions.Models;
-using FluentResults;
 
-namespace Core.Tools.Downloaders;
+namespace Main.Tools.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
+public class YouTubeAudioDownloader : ToolBase<YouTubeAudioDownloaderParams, Stream>, IDisposable
 {
-    private readonly string _url;
-    private readonly AudioFormat _audioFormat;
-
-    public YouTubeAudioDownloader(
-        string url,
-        AudioFormat audioFormat
-    )
+    public YouTubeAudioDownloader()
     {
-        // State = ToolState.Idle;
-
-        _url = url;
-        _audioFormat = audioFormat;
+        State = ToolState.Idle;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public override async Task<Stream> ProcessAsync(YouTubeAudioDownloaderParams input, CancellationToken cancellationToken = default)
     {
-        // State = ToolState.Running;
+        State = ToolState.Running;
 
-        Stream? downloadedStream = await _downloadViaYtDlp(_url, _audioFormat);
+        Stream? downloadedStream = await _downloadViaYtDlp(input.Url, input.TargetSampleRate, input.TargetNbChannels, input.TargetBitsPerSample);
         if (downloadedStream is null)
         {
             throw new Exception("No stream was downloaded");
         }
 
-        // State = ToolState.Idle;
+        State = ToolState.Idle;
 
         return downloadedStream;
     }
 
-    private async Task<Stream> _downloadViaYtDlp(string videoUrl, AudioFormat audioFormat)
+    private async Task<Stream> _downloadViaYtDlp(string videoUrl, int targetSampleRate, int targetNbChannels, int targetBitsPerSample)
     {
         // Create a temporary file for yt-dlp to write to
-        var tempFile = $"{Path.GetTempFileName()}.wav";
+        var tempFile = $"{Path.GetTempFileName()}.mp3";
 
         // Build process info
         var psi = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
+            Arguments = $"-x --audio-format mp3 --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {targetSampleRate} -ac {targetNbChannels} s{targetBitsPerSample}\" -o \"{tempFile}\"",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,
@@ -74,12 +62,11 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
             var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.DeleteOnClose);
             return fileStream;
         }
-        finally
+        catch
         {
             if (File.Exists(tempFile))
-            {
                 File.Delete(tempFile);
-            }
+            throw;
         }
     }
 
@@ -88,3 +75,5 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
     }
 
 }
+
+public record YouTubeAudioDownloaderParams(string Url, int TargetSampleRate, int TargetNbChannels, int TargetBitsPerSample);

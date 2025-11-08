@@ -1,22 +1,24 @@
+using FluentResults;
+
 namespace Core.Abstractions;
 
 public interface IPipeline<TIn, TOut>
 {
-    Task<TOut> Execute(TIn input, CancellationToken cancellationToken = default);
+    Task<Result<TOut>> Execute(TIn input, CancellationToken cancellationToken = default);
 }
 
 public class Pipeline<TIn, TOut> : IPipeline<TIn, TOut>
 {
-    private readonly Func<TIn, CancellationToken, Task<TOut>> _executor;
+    private readonly Func<TIn, CancellationToken, Task<Result<TOut>>> _executor;
 
-    private Pipeline(Func<TIn, CancellationToken, Task<TOut>> executor) { _executor = executor; }
+    private Pipeline(Func<TIn, CancellationToken, Task<Result<TOut>>> executor) { _executor = executor; }
 
-    public Task<TOut> Execute(TIn input, CancellationToken cancellationToken = default)
+    public Task<Result<TOut>> Execute(TIn input, CancellationToken cancellationToken = default)
     {
         return _executor(input, cancellationToken);
     }
 
-    public Task<TOut> Execute(CancellationToken cancellationToken = default) // Convenience overload for no-input pipelines
+    public Task<Result<TOut>> Execute(CancellationToken cancellationToken = default) // Convenience overload for no-input pipelines
     {
         return _executor((TIn)(object)Unit.Value, cancellationToken);
     }
@@ -26,7 +28,11 @@ public class Pipeline<TIn, TOut> : IPipeline<TIn, TOut>
     async (input, cancellationToken) =>
     {
         var intermediate = await _executor(input, cancellationToken).ConfigureAwait(false);
-        return await next.Transform(intermediate, cancellationToken).ConfigureAwait(false);
+        if (intermediate.IsFailed)
+        {
+            return intermediate.ToResult<TNext>();
+        }
+        return await next.Transform(intermediate.Value, cancellationToken).ConfigureAwait(false);
     });
 
     // Factory for starting a new pipeline from a tool

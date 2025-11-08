@@ -1,5 +1,6 @@
 ﻿using Core.Abstractions;
 using Core.ChatAgents;
+using FluentResults;
 
 namespace Core.Tools.TextTransformers;
 
@@ -18,7 +19,7 @@ public class AITextTransformer : ITool<string, string>
         _instructions = instructions;
     }
 
-    public async Task<string> Transform(string input, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(string input, CancellationToken cancellationToken = default)
     {
         _chatAgent.InitializeConversation();
 

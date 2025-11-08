@@ -4,6 +4,7 @@ using NAudio.Wave;
 using Whisper.net.Ggml;
 using Core.Abstractions;
 using Core.Abstractions.Models;
+using FluentResults;
 
 namespace Core.Tools.Transcribers;
 
@@ -26,7 +27,7 @@ public class WhisperTranscriber : ITool<Stream, string>
         _modelType = modelType;
     }
 
-    public async Task<string> Transform(Stream input, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(Stream input, CancellationToken cancellationToken = default)
     {
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
