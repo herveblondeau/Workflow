@@ -1,0 +1,38 @@
+using Core.Abstractions;
+using FluentResults;
+
+namespace Core.Tools.Workflow;
+
+public class FirstSuccessfulTool<TIn, TOut> : ITool<TIn, TOut>
+{
+    private List<ITool<TIn, TOut>> _tools { get; init; }
+
+    public FirstSuccessfulTool()
+    {
+        _tools = new();
+    }
+
+    public FirstSuccessfulTool<TIn, TOut> Add(ITool<TIn, TOut> tool)
+    {
+        _tools.Add(tool);
+        return this;
+    }
+
+    public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
+    {
+        var aggregatedErrors = new List<IError>();
+
+        foreach (var tool in _tools)
+        {
+            var result = await tool.Transform(input, cancellationToken);
+            if (result.IsSuccess)
+            {
+                return result;
+            }
+
+            aggregatedErrors.AddRange(result.Errors);
+        }
+
+        return Result.Fail<TOut>(aggregatedErrors);
+    }
+}
