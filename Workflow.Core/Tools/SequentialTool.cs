@@ -28,7 +28,9 @@ public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
 
                 // stop chain on failure
                 if (intermediate.IsFailed)
+                {
                     return intermediate.ToResult<TNext>();
+                }
 
                 return await next.Transform(intermediate.Value, cancellationToken).ConfigureAwait(false);
             });

@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core.Infrastructure\Core.Infrastructure.csproj" />
+    <ProjectReference Include="..\Workflow.Infrastructure\Workflow.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

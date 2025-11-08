@@ -53,13 +53,13 @@ var sequentialTool = SequentialTool<int, int>
 //     }
 // );
 
-var pipeline = Pipeline
+var workflow = Workflow
     .Add(sequentialTool)
 ;
-var result = await pipeline.Execute(6);
+var result = await workflow.Execute(6);
 if (result.IsFailed)
 {
-    Console.WriteLine("Pipeline failed");
+    Console.WriteLine("Workflow failed");
     foreach (var error in result.Errors)
     {
         Console.WriteLine(error);
@@ -129,7 +129,7 @@ var sourceUrl = "https://www.youtube.com/watch?v=2jH_pr8nGQU&pp=ugUEEgJlbg%3D%3D
 var chatClient = new OpenRouterChatClient("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");
 chatClient.UseModel("google/gemini-2.5-flash-image");
 
-var pipeline = Pipeline
+var workflow = Workflow
     .Add(new YouTubeAudioDownloader(sourceUrl, audioFormat))
     .Add(new WhisperTranscriber(audioFormat, Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel))
     .Add(new AITextTransformer(new ChatAgent(chatClient), sourceLanguage, new List<string>
@@ -139,10 +139,10 @@ var pipeline = Pipeline
         "The summary MUST be concise and to the point (MAXIMUM 100 words)",
     }))
 ;
-var result = await pipeline.Execute();
+var result = await workflow.Execute();
 if (result.IsFailed)
 {
-    Console.WriteLine("Pipeline failed");
+    Console.WriteLine("Workflow failed");
     foreach (var error in result.Errors)
     {
         Console.WriteLine(error.Message);

@@ -28,7 +28,9 @@ public class ParallelTool<TIn, TOut> : ITool<TIn, TOut>
 
         var errors = results.Where(r => r.IsFailed).SelectMany(r => r.Errors).ToList();
         if (errors.Any())
+        {
             return Result.Fail<TOut>(errors);
+        }
 
         var values = results.Select(r => r.Value!).ToList();
         var combined = _reducer(values);

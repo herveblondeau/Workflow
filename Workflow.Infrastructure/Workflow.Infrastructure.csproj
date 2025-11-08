@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Core.Abstractions\Core.Abstractions.csproj" />
+    <ProjectReference Include="..\Workflow.Core\Workflow.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
