@@ -1,6 +1,5 @@
 ﻿using Core;
 using Core.ChatAgents;
-using Core.ChatAgents.OpenRouter;
 using Whisper.net.Ggml;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
@@ -8,16 +7,14 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Net;
 using System.Text.Json.Serialization;
-using Core.Tools.Recorders;
-using Core.Tools.Transcribers;
-using Core.Tools.TextTransformers;
-using Core.Tools.Downloaders;
-using Core.Abstractions;
-using Core.Abstractions.Models;
+using Infrastructure.Recorders;
+using Infrastructure.Transcribers;
+using Infrastructure.TextTransformers;
+using Infrastructure.Downloaders;
+using Core.Models;
 using FluentResults;
 using System.IO.Pipelines;
-using Core.Tools.Workflow;
-using Core.Infrastructure.Tools.Workflow;
+using Infrastructure.Workflow;
 
 // var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
 // firstSuccessfulTool
@@ -27,34 +24,29 @@ using Core.Infrastructure.Tools.Workflow;
 //     .Add(new Tool4())
 // ;
 
-var conditionalTool = new ConditionalTool<int, string>(
-    input => input == 36,
-    new Tool5(),
-    new Tool6()
-);
-var sequentialTool = SequentialTool<int, int>
-    .From(new Tool1())
-    .Add(new Tool2())
-    .Add(new Tool3())
-    // .Add(new Tool4())
-    .Add(conditionalTool)
-;
-
-// var parallelTool = new ParallelTool<int, int>(
+// var parallelTool = new ParallelTool<int, string>(
 //     [
-//         new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool4()), // needs input
-//         new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool5()) // no input
+//         new ParallelTool<int, int>.ValueSubTool<int, int>(new ToolA()), // tool that needs an input
+//         new ParallelTool<int, string>.ValueSubTool<int, string>(new ToolB()), // tool that needs an input
+//         new ParallelTool<int, double>.ValueSubTool<int, double>(new ToolC()), // tool that needs an input
+//         new ParallelTool<int, string>.UnitSubTool<int, string>(new ToolD()) // tool with no input
 //     ],
 //     outputs =>
 //     {
-//         var n = (int)outputs[0];
-//         var s = (string)outputs[1];
-//         return $"{s} & {n}".Length;
+//         var myInt = (int)outputs[0];
+//         var myString = (string)outputs[1];
+//         var myDouble = (double)outputs[2];
+//         var myString2 = (string)outputs[3];
+//         return "A string computed from all output results";
 //     }
 // );
 
 var workflow = Workflow
-    .Add(sequentialTool)
+    // .Add(parallelTool)
+    .Add(new Tool1())
+    .Add(new Tool2())
+    .Add(new Tool3())
+    .Add(new Tool4())
 ;
 var result = await workflow.Execute(6);
 if (result.IsFailed)
@@ -67,6 +59,58 @@ if (result.IsFailed)
     return;
 }
 Console.WriteLine($"Result: {result.Value}");
+return;
+
+class ToolA : ITool<int, int>
+{
+    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+        return Task.FromResult(Result.Ok(input));
+    }
+}
+
+class ToolB : ITool<int, string>
+{
+    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+        return Task.FromResult(Result.Ok("TOOL B RESULT"));
+    }
+}
+
+class ToolC : ITool<int, double>
+{
+    public Task<Result<double>> Transform(int input, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+        return Task.FromResult(Result.Ok(0.5));
+    }
+}
+
+class ToolD : ITool<Unit, string>
+{
+    public Task<Result<string>> Transform(Unit _, CancellationToken cancellationToken = default)
+    {
+        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+        return Task.FromResult(Result.Ok("TOOL D RESULT"));
+    }
+}
+
+// var workflow = Workflow
+//     .Add(parallelTool)
+// ;
+// var result = await workflow.Execute(6);
+// if (result.IsFailed)
+// {
+//     Console.WriteLine("Workflow failed");
+//     foreach (var error in result.Errors)
+//     {
+//         Console.WriteLine(error);
+//     }
+//     return;
+// }
+// Console.WriteLine($"Result: {result.Value}");
 
 class Tool1 : ITool<int, int>
 {
@@ -91,6 +135,7 @@ class Tool3 : ITool<int, int>
     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
     {
         // return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
+        return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
         return Task.FromResult(Result.Ok(input * 3));
     }
 }
