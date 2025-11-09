@@ -7,37 +7,51 @@ namespace Core.Tools.Workflow;
 /// Runs one of two tools depending on a condition
 /// </summary>
 /// <example>
-/// var conditionalTool = new ConditionalTool<int, string>(
-///     input => input == 42,
-///     new Tool1(),
-///     new Tool2()
+/// var conditionalTool = ConditionalTool.If(
+///     condition: n => n >= 30,
+///     thenTool: new Tool1(),
+///     elseTool: new Tool2()
 /// );
 /// </example>
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using FluentResults;
+
 public class ConditionalTool<TIn, TOut> : ITool<TIn, TOut>
 {
-    private readonly Func<TIn, bool> _predicate;
-    private readonly ITool<TIn, TOut> _trueTool;
-    private readonly ITool<TIn, TOut> _falseTool;
+    private readonly Func<TIn, bool> _condition;
+    private readonly ITool<TIn, TOut> _thenTool;
+    private readonly ITool<TIn, TOut> _elseTool;
 
     public ConditionalTool(
-        Func<TIn, bool> predicate,
-        ITool<TIn, TOut> trueTool,
-        ITool<TIn, TOut> falseTool)
+        Func<TIn, bool> condition,
+        ITool<TIn, TOut> thenTool,
+        ITool<TIn, TOut> elseTool)
     {
-        _predicate = predicate ?? throw new ArgumentNullException(nameof(predicate));
-        _trueTool = trueTool ?? throw new ArgumentNullException(nameof(trueTool));
-        _falseTool = falseTool ?? throw new ArgumentNullException(nameof(falseTool));
+        _condition = condition ?? throw new ArgumentNullException(nameof(condition));
+        _thenTool = thenTool ?? throw new ArgumentNullException(nameof(thenTool));
+        _elseTool = elseTool ?? throw new ArgumentNullException(nameof(elseTool));
     }
 
-    public Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
+    public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
     {
-        if (_predicate(input))
-        {
-            return _trueTool.Transform(input, cancellationToken);
-        }
-        else
-        {
-            return _falseTool.Transform(input, cancellationToken);
-        }
+        var selectedTool = _condition(input) ? _thenTool : _elseTool;
+        return await selectedTool.Transform(input, cancellationToken).ConfigureAwait(false);
     }
+}
+
+// Helper façade for type inference
+public static class ConditionalTool
+{
+    public static ConditionalTool<TIn, TOut> If<TIn, TOut>(
+        Func<TIn, bool> condition,
+        ITool<TIn, TOut> thenTool,
+        ITool<TIn, TOut> elseTool)
+        => new ConditionalTool<TIn, TOut>(condition, thenTool, elseTool);
+
+    // public static ConditionalTool<TIn, TOut> If<TIn, TOut>(
+    //     Func<TIn, bool> condition,
+    //     ITool<TIn, TOut> thenTool)
+    //     => new ConditionalTool<TIn, TOut>(condition, thenTool, new NoOpTool<TIn, TOut>());
 }
