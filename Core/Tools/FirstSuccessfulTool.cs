@@ -1,8 +1,10 @@
-using Core;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentResults;
+using Core;
 
 namespace Infrastructure.Workflow;
-
 
 /// <summary>
 /// Runs multiple tools in sequence
@@ -10,43 +12,56 @@ namespace Infrastructure.Workflow;
 /// Fails if all tools fail
 /// </summary>
 /// <example>
-/// var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
-/// firstSuccessfulTool
+/// var firstSuccessfulTool = FirstSuccessfulTool
 ///     .Add(new Tool1())
 ///     .Add(new Tool2())
-///     .Add(new Tool3())
+///     .Add(new Tool3());
 /// </example>
+
 public class FirstSuccessfulTool<TIn, TOut> : ITool<TIn, TOut>
 {
-    private List<ITool<TIn, TOut>> _tools { get; init; }
+    private readonly List<ITool<TIn, TOut>> _tools;
 
-    public FirstSuccessfulTool()
+    private FirstSuccessfulTool(ITool<TIn, TOut> tool)
     {
-        _tools = new();
-    }
-
-    public FirstSuccessfulTool<TIn, TOut> Add(ITool<TIn, TOut> tool)
-    {
-        _tools.Add(tool);
-        return this;
+        _tools = new List<ITool<TIn, TOut>>()
+        {
+            tool
+        };
     }
 
     public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
     {
-        var aggregatedErrors = new List<IError>();
+        List<IError> errors = new();
 
         foreach (var tool in _tools)
         {
-            var result = await tool.Transform(input, cancellationToken);
-            if (result.IsSuccess)
-            {
-                // TODO: add the previously aggregated errors if possible
-                return result;
-            }
+            var result = await tool.Transform(input, cancellationToken).ConfigureAwait(false);
 
-            aggregatedErrors.AddRange(result.Errors);
+            if (result.IsSuccess)
+                return result;
+
+            errors.AddRange(result.Errors);
         }
 
-        return Result.Fail<TOut>(aggregatedErrors);
+        return Result.Fail<TOut>($"All {_tools.Count} tools failed.")
+            .WithErrors(errors);
+
     }
+
+    // Factory for starting a sequence from a single tool
+    public static FirstSuccessfulTool<TIn, TOut> Create(ITool<TIn, TOut> tool) => new FirstSuccessfulTool<TIn, TOut>(tool);
+
+    // Adds a new tool with matching input/output transition
+    public FirstSuccessfulTool<TIn, TOut> Add(ITool<TIn, TOut> next)
+    {
+        _tools.Add(next);
+        return this;
+    }
+}
+
+public static class FirstSuccessfulTool
+{
+    public static FirstSuccessfulTool<TIn, TOut> Add<TIn, TOut>(ITool<TIn, TOut> tool) => FirstSuccessfulTool<TIn, TOut>.Create(tool);
+    public static FirstSuccessfulTool<Unit, TOut> Add<TOut>(ITool<Unit, TOut> tool) => FirstSuccessfulTool<Unit, TOut>.Create(tool); // For tools that don't take input (i.e., ITool<Unit, TOut>)
 }

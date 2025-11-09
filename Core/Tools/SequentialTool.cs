@@ -8,10 +8,10 @@ namespace Infrastructure.Tools.Workflow;
 /// All tools must succeed for the sequence to succeed
 /// </summary>
 /// <example>
-/// var sequentialTool = SequentialTool<int, int>
-///     .From(new Tool1())
+/// var sequentialTool = SequentialTool
+///     .Add(new Tool1())
 ///     .Add(new Tool2())
-///     .Add(new Tool3())
+///     .Add(new Tool3());
 /// </example>
 public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
 {
@@ -26,8 +26,7 @@ public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
         => await _executor(input, cancellationToken).ConfigureAwait(false);
 
     // Factory for starting a sequence from a single tool
-    public static SequentialTool<TIn, TOut> Create(ITool<TIn, TOut> tool)
-        => new SequentialTool<TIn, TOut>(tool.Transform);
+    public static SequentialTool<TIn, TOut> Create(ITool<TIn, TOut> tool) => new SequentialTool<TIn, TOut>(tool.Transform);
 
     // Adds a new tool with matching input/output transition
     public SequentialTool<TIn, TNext> Add<TNext>(ITool<TOut, TNext> next)
