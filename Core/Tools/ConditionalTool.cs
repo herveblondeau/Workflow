@@ -36,8 +36,9 @@ public class ConditionalTool<TIn, TOut> : ITool<TIn, TOut>
 
     public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
     {
-        var selectedTool = _condition(input) ? _thenTool : _elseTool;
-        return await selectedTool.Transform(input, cancellationToken).ConfigureAwait(false);
+        var conditionFulfilled = _condition(input);
+        var selectedTool = conditionFulfilled ? _thenTool : _elseTool;
+        return (await selectedTool.Transform(input, cancellationToken).ConfigureAwait(false)).WithSuccess(conditionFulfilled ? $"{nameof(ConditionalTool)}: condition fulfilled" : $"{nameof(ConditionalTool)}: condition not fulfilled");
     }
 }
 

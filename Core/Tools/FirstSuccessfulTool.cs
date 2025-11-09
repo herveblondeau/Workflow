@@ -46,7 +46,7 @@ public class FirstSuccessfulTool<TIn, TOut> : ITool<TIn, TOut>
             reasons.AddRange(result.Reasons);
         }
 
-        return Result.Fail<TOut>($"All {_tools.Count} tools failed.")
+        return Result.Fail<TOut>($"All {_tools.Count} tools failed")
             .WithReasons(reasons);
     }
 
