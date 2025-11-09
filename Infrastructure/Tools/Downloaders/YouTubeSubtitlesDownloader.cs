@@ -23,20 +23,17 @@ public class YouTubeSubtitlesDownloader : ITool<Unit, string>
     {
         // State = ToolState.Running;
 
-        string content = await _downloadViaYtDlp(_url, _sourceLanguage);
-        if (string.IsNullOrEmpty(content))
+        var result = await _downloadViaYtDlp(_url, _sourceLanguage);
+        if (result.IsFailed)
         {
-            throw new Exception("No stream was downloaded");
+            return result;
         }
 
-        var cleanedContent = _cleanSubtitlesContent(content);
-
         // State = ToolState.Idle;
-
-        return cleanedContent;
+        return _cleanSubtitlesContent(result.Value);
     }
 
-    private async Task<string> _downloadViaYtDlp(string videoUrl, string language)
+    private async Task<Result<string>> _downloadViaYtDlp(string videoUrl, string language)
     {
         // Create a temporary file for yt-dlp to write to
         var tempFilePrefix = Path.GetTempFileName();
@@ -58,7 +55,7 @@ public class YouTubeSubtitlesDownloader : ITool<Unit, string>
             using var process = Process.Start(psi);
             if (process == null)
             {
-                throw new InvalidOperationException("yt-dlp failed to start.");
+                return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp process failed to start");
             }
 
             await process.WaitForExitAsync();
@@ -66,27 +63,45 @@ public class YouTubeSubtitlesDownloader : ITool<Unit, string>
             if (process.ExitCode != 0)
             {
                 var error = await process.StandardError.ReadToEndAsync();
-                throw new Exception($"yt-dlp failed: {error}");
+                return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp process exited with error ({error})");
             }
 
             if (!File.Exists(tempFile))
             {
-                throw new Exception("yt-dlp did not produce the expected subtitle file.");
+                return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp subtitles file not generated");
             }
 
-            return File.ReadAllText($"{tempFilePrefix}.{language}.vtt");
+            string content;
+            try
+            {
+                content = File.ReadAllText($"{tempFilePrefix}.{language}.vtt");
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(new Error($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp cannot read generated subtitles files ({tempFilePrefix}.{language}.vtt)").CausedBy(ex));
+            }
+
+            return Result.Ok(content);
         }
         finally
         {
-            if (File.Exists(tempFilePrefix))
+            try
             {
-                File.Delete(tempFilePrefix);
+                if (File.Exists(tempFilePrefix))
+                {
+                    File.Delete(tempFilePrefix);
+                }
             }
+            catch {}
 
-            if (File.Exists(tempFile))
+            try
             {
-                File.Delete(tempFile);
+                if (File.Exists(tempFile))
+                {
+                    File.Delete(tempFile);
+                }
             }
+            catch {}
         }
     }
 

@@ -7,7 +7,7 @@ namespace Infrastructure.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
+public class YouTubeAudioDownloader : ITool<Unit, Stream>
 {
     private readonly string _url;
     private readonly AudioFormat _audioFormat;
@@ -25,21 +25,6 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        // State = ToolState.Running;
-
-        Stream? downloadedStream = await _downloadViaYtDlp(_url, _audioFormat);
-        if (downloadedStream is null)
-        {
-            throw new Exception("No stream was downloaded");
-        }
-
-        // State = ToolState.Idle;
-
-        return downloadedStream;
-    }
-
-    private async Task<Stream> _downloadViaYtDlp(string videoUrl, AudioFormat audioFormat)
-    {
         // Create a temporary file for yt-dlp to write to
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
@@ -47,7 +32,7 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
         var psi = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {videoUrl} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
+            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {_url} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,
@@ -59,7 +44,7 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
             using var process = Process.Start(psi);
             if (process == null)
             {
-                throw new InvalidOperationException("yt-dlp failed to start.");
+                return Result.Fail($"{nameof(YouTubeAudioDownloader)}: yt-dlp process failed to start");
             }
 
             await process.WaitForExitAsync();
@@ -67,24 +52,31 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>, IDisposable
             if (process.ExitCode != 0)
             {
                 var error = await process.StandardError.ReadToEndAsync();
-                throw new Exception($"yt-dlp failed: {error}");
+                return Result.Fail($"{nameof(YouTubeAudioDownloader)}: yt-dlp process exited with error ({error})");
             }
 
             // Open file stream and let caller manage lifetime
-            var fileStream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.DeleteOnClose);
-            return fileStream;
+            Stream stream;
+            try
+            {
+                 stream = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.DeleteOnClose);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(new Error($"{nameof(YouTubeAudioDownloader)}: yt-dlp cannot open stream on file {tempFile}").CausedBy(ex));
+            }
+            return stream;
         }
         finally
         {
-            if (File.Exists(tempFile))
+            try
             {
-                File.Delete(tempFile);
+                if (File.Exists(tempFile))
+                {
+                    File.Delete(tempFile);
+                }
             }
+            catch {}
         }
     }
-
-    public void Dispose()
-    {
-    }
-
 }

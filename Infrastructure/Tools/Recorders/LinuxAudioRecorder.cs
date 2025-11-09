@@ -31,15 +31,36 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+        try
+        {
+            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(LinuxAudioRecorder)}: cannot start recording").CausedBy(ex));
+        }
 
         if (WaitForStopSignal is not null)
         {
             await WaitForStopSignal.Invoke(cancellationToken);
         }
 
-        await Stop();
-        return GetRecordedStream()!;
+        try
+        {
+            await Stop();
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(LinuxAudioRecorder)}: cannot stop recording").CausedBy(ex));
+        }
+
+        Stream? stream = GetRecordedStream();
+        if (stream is null)
+        {
+            return Result.Fail($"{nameof(LinuxAudioRecorder)}: recorded stream is unavailable");
+        }
+
+        return stream;
     }
 
    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
@@ -49,7 +70,8 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         _audioStream = new MemoryStream();
 
         // Get the default sink
-        string defaultSink = _runCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
+        string defaultSink;
+        defaultSink = _runCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
         if (string.IsNullOrEmpty(defaultSink))
         {
             throw new Exception("Failed to get default sink from PulseAudio. Ensure PulseAudio is installed and running."); // TODO: consider using a custom exception
@@ -118,17 +140,14 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         // State = ToolState.Stopping;
 
         // Stop reading and kill FFmpeg
-        Console.WriteLine("OK1");
         _cts.Cancel();
         _ffmpeg.Kill();
         while (!_ffmpeg.HasExited)
         {
             await Task.Delay(100);
         }
-        Console.WriteLine("OK2");
 
         await _readTask;
-        Console.WriteLine("OK3");
 
         // State = ToolState.Idle;
     }

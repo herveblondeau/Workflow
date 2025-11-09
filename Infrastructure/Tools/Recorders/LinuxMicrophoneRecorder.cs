@@ -26,15 +26,36 @@ public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
-        Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+        try
+        {
+            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(LinuxMicrophoneRecorder)}: cannot start recording").CausedBy(ex));
+        }
 
         if (WaitForStopSignal is not null)
         {
             await WaitForStopSignal.Invoke(cancellationToken);
         }
 
-        await Stop();
-        return GetRecordedStream()!;
+        try
+        {
+            await Stop();
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(LinuxMicrophoneRecorder)}: cannot stop recording").CausedBy(ex));
+        }
+
+        Stream? stream = GetRecordedStream();
+        if (stream is null)
+        {
+            return Result.Fail($"{nameof(LinuxMicrophoneRecorder)}: recorded stream is unavailable");
+        }
+
+        return stream;
     }
 
 

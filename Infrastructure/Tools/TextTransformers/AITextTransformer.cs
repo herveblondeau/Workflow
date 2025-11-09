@@ -26,6 +26,13 @@ public class AITextTransformer : ITool<string, string>
         var prompt = @$"Here is some content in the language '{_language}': {input}
             Please transform it according to the following instructions:
             " + string.Join(Environment.NewLine, _instructions.Select(l => $"- {l}"));
-        return await _chatAgent.Prompt(prompt);
+        try
+        {
+            return Result.Ok(await _chatAgent.Prompt(prompt));
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(AITextTransformer)}: cannot send prompt").CausedBy(ex));
+        }
     }
 }

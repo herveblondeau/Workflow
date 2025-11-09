@@ -1,3 +1,4 @@
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Whisper.net;
 using NAudio.Wave;
@@ -32,16 +33,30 @@ public class WhisperTranscriber : ITool<Stream, string>
         var tempFile = $"{Path.GetTempFileName()}.wav";
 
         input.Position = 0;
-        using (var writer = new WaveFileWriter(tempFile, new WaveFormat(_audioFormat.SampleRate, _audioFormat.BitsPerSample, _audioFormat.NbChannels)))
+        try
         {
-            input.CopyTo(writer);
+            using (var writer = new WaveFileWriter(tempFile, new WaveFormat(_audioFormat.SampleRate, _audioFormat.BitsPerSample, _audioFormat.NbChannels)))
+            {
+                input.CopyTo(writer);
+            }
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot write WAV file {tempFile}").CausedBy(ex));
         }
 
         // Initialize Whisper
         // https://github.com/sandrohanea/whisper.net?tab=readme-ov-file
         if (!File.Exists(_modelFilePath))
         {
-            await _downloadModel(_modelFilePath, _modelType);
+            try
+            {
+                await _downloadModel(_modelFilePath, _modelType);
+            }
+            catch (Exception ex)
+            {
+                return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot download model {_modelType}").CausedBy(ex));
+            }
         }
         var whisperFactory = WhisperFactory.FromPath(_modelFilePath);
         var processor = whisperFactory.CreateBuilder()
@@ -50,21 +65,32 @@ public class WhisperTranscriber : ITool<Stream, string>
 
         // Transcribe
         StringBuilder transcription = new();
-        using (var fileStream = File.OpenRead(tempFile))
+        try
         {
-            await foreach (var result in processor.ProcessAsync(fileStream))
+            using (var fileStream = File.OpenRead(tempFile))
             {
-                transcription.Append(result.Text);
+                await foreach (var result in processor.ProcessAsync(fileStream))
+                {
+                    transcription.Append(result.Text);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot open file {tempFile}").CausedBy(ex));
         }
 
         // Clean up
-        if (File.Exists(tempFile))
+        try
         {
-            File.Delete(tempFile);
+            if (File.Exists(tempFile))
+            {
+                File.Delete(tempFile);
+            }
         }
+        catch {}
 
-        return transcription.ToString();
+        return Result.Ok(transcription.ToString());
     }
 
     // Models are manually downlodable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
