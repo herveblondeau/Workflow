@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Core;
 using FluentResults;
 
@@ -10,90 +15,89 @@ namespace Infrastructure.Tools.Workflow;
 /// - can produce any output type; it's the reducer's job to merge them into the parallel tool's output type
 /// </summary>
 /// <example>
-/// var parallelTool = new ParallelTool<int, string>(
-///     [
-///         new ParallelTool<int, int>.ValueSubTool<int, int>(new Tool1()), // tool that needs an input
-///         new ParallelTool<int, int>.ValueSubTool<int, string>(new Tool2()), // tool that needs an input
-///         new ParallelTool<int, int>.ValueSubTool<int, double>(new Tool3()), // tool that needs an input
-///         new ParallelTool<int, string>.UnitSubTool<int, string>(new Tool4()) // tool with no input
-///     ],
-///     outputs =>
+/// var parallelTool = ParallelTool.Create(
+///     new Tool1(), // ITool<int, int>
+///     async (results, CancellationToken) => // reducer
 ///     {
-///         var myInt = (int)outputs[0];
-///         var myString = (string)outputs[1];
-///         var myDouble = (double)outputs[2];
-///         var myString2 = (string)outputs[3];
-///         return "A string computed from all output results";
-///     }
-/// );
+///         var successes = results
+///             .OfType<Result<int>>()
+///             .Where(r => r.IsSuccess)
+///             .Select(r => r.Value);
+///
+///         return Result.Ok(successes.Sum());
+///     })
+///     .Add(new Tool2()) // ITool<int, int>
+///     .Add(new ToolD()) // ITool<Unit, int>
+/// ;
 /// </example>
-public interface IParallelSubtool<TIn>
-{
-    Task<Result<object>> Execute(TIn input, CancellationToken cancellationToken);
-}
-
 public class ParallelTool<TIn, TOut> : ITool<TIn, TOut>
 {
-    private readonly IReadOnlyList<IParallelSubtool<TIn>> _subtools;
-    private readonly Func<IReadOnlyList<object>, TOut> _reducer;
+    private readonly IReadOnlyList<object> _tools;
+    private readonly Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> _asyncReducer;
 
-    public ParallelTool(
-        IEnumerable<IParallelSubtool<TIn>> subtools,
-        Func<IReadOnlyList<object>, TOut> reducer)
+    public ParallelTool(IEnumerable<object> tools, Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
     {
-        _subtools = subtools.ToList();
-        _reducer = reducer;
+        _tools = tools.ToList();
+        _asyncReducer = asyncReducer ?? throw new ArgumentNullException(nameof(asyncReducer));
     }
 
     public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
     {
-        var tasks = _subtools.Select(t => t.Execute(input, cancellationToken)).ToList();
+        var tasks = _tools.Select(tool => RunTool(tool, input, cancellationToken)).ToArray();
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-        var errors = results.Where(r => r.IsFailed).SelectMany(r => r.Errors).ToList();
-        if (errors.Any())
-        {
-            return Result.Fail<TOut>(errors);
-        }
-
-        var values = results.Select(r => r.Value!).ToList();
-        var combined = _reducer(values);
-        return Result.Ok(combined);
+        return await _asyncReducer(results, cancellationToken).ConfigureAwait(false);
     }
 
-    public class ValueSubTool<TIn, TOut> : IParallelSubtool<TIn>
+    private static async Task<object> RunTool(object tool, TIn input, CancellationToken ct)
     {
-        private readonly ITool<TIn, TOut> _tool;
-
-        public ValueSubTool(ITool<TIn, TOut> tool)
+        switch (tool)
         {
-            _tool = tool;
-        }
-
-        public async Task<Result<object>> Execute(TIn input, CancellationToken cancellationToken)
-        {
-            var result = await _tool.Transform(input, cancellationToken).ConfigureAwait(false);
-            return result.IsSuccess
-                ? Result.Ok((object)result.Value!)
-                : Result.Fail<object>(result.Errors);
-        }
-    }
-
-    public class UnitSubTool<TIn, TOut> : IParallelSubtool<TIn>
-    {
-        private readonly ITool<Unit, TOut> _tool;
-
-        public UnitSubTool(ITool<Unit, TOut> tool)
-        {
-            _tool = tool;
-        }
-
-        public async Task<Result<object>> Execute(TIn input, CancellationToken cancellationToken)
-        {
-            var result = await _tool.Transform(Unit.Value, cancellationToken).ConfigureAwait(false);
-            return result.IsSuccess
-                ? Result.Ok((object)result.Value!)
-                : Result.Fail<object>(result.Errors);
+            case ITool<TIn, TOut> withInput:
+                {
+                    var result = await withInput.Transform(input, ct).ConfigureAwait(false);
+                    return result;
+                }
+            case ITool<Unit, TOut> noInput:
+                {
+                    var result = await noInput.Transform(Unit.Value, ct).ConfigureAwait(false);
+                    return result;
+                }
+            default:
+                throw new InvalidOperationException("Invalid tool type in ParallelTool");
         }
     }
+
+    // Fluent composition
+
+    public ParallelTool<TIn, TOut> Add<TSub>(ITool<TIn, TSub> tool)
+        => new ParallelTool<TIn, TOut>(_tools.Concat(new[] { tool }), _asyncReducer);
+
+    public ParallelTool<TIn, TOut> Add<TSub>(ITool<Unit, TSub> tool)
+        => new ParallelTool<TIn, TOut>(_tools.Concat(new[] { tool }), _asyncReducer);
+
+    public static ParallelTool<TIn, TOut> Create<TSub>(
+        ITool<TIn, TSub> first,
+        Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
+        => new ParallelTool<TIn, TOut>(new object[] { first }, asyncReducer);
+
+    public static ParallelTool<TIn, TOut> Create<TSub>(
+        ITool<Unit, TSub> first,
+        Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
+        => new ParallelTool<TIn, TOut>(new object[] { first }, asyncReducer);
+}
+
+// Non-generic façade for inference
+
+public static class ParallelTool
+{
+    public static ParallelTool<TIn, TOut> Create<TIn, TOut, TSub>(
+        ITool<TIn, TSub> tool,
+        Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
+        => ParallelTool<TIn, TOut>.Create(tool, asyncReducer);
+
+    public static ParallelTool<TIn, TOut> Create<TIn, TOut, TSub>(
+        ITool<Unit, TSub> tool,
+        Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
+        => ParallelTool<TIn, TOut>.Create(tool, asyncReducer);
 }
