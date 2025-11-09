@@ -21,12 +21,7 @@ namespace Infrastructure.Tools.Workflow;
 ///     .Add(new Tool3()) // ITool<Unit, int>
 ///     .Reduce(results => // async version: .Reduce(async (results, ct) =>
 ///     {
-///         var successes = results
-///             .OfType<Result<int>>()
-///             .Where(r => r.IsSuccess)
-///             .Select(r => r.Value);
-///
-///         return Result.Ok(successes.Sum());
+///         return Result.Ok(results.OfType<Result<int>>().Where(r => r.IsSuccess).Sum(r => r.Value));
 ///     })
 /// ;
 /// </example>
@@ -101,7 +96,18 @@ public static class ParallelTool
             var tasks = _tools.Select(tool => RunTool(tool, input, cancellationToken)).ToArray();
             var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            return await _asyncReducer(results, cancellationToken).ConfigureAwait(false);
+            var outResults = results.OfType<Result<TOut>>();
+            var isSuccess = outResults
+                .Any(r => r.IsSuccess)
+            ;
+
+            if (!isSuccess)
+            {
+                return Result.Fail(outResults.SelectMany(r => r.Errors));
+            }
+
+            return (await _asyncReducer(results, cancellationToken).ConfigureAwait(false))
+                .WithSuccesses(outResults.SelectMany(r => r.Reasons).Select(r => new Success(r.Message)));
         }
 
         private static async Task<object> RunTool(object tool, TIn input, CancellationToken ct)
