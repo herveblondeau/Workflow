@@ -32,21 +32,22 @@ public class FirstSuccessfulTool<TIn, TOut> : ITool<TIn, TOut>
 
     public async Task<Result<TOut>> Transform(TIn input, CancellationToken cancellationToken = default)
     {
-        List<IError> errors = new();
+        List<IReason> reasons = new();
 
         foreach (var tool in _tools)
         {
             var result = await tool.Transform(input, cancellationToken).ConfigureAwait(false);
 
             if (result.IsSuccess)
-                return result;
+            {
+                return result.WithSuccesses(reasons.Select(r => new Success(r.Message)));
+            }
 
-            errors.AddRange(result.Errors);
+            reasons.AddRange(result.Reasons);
         }
 
         return Result.Fail<TOut>($"All {_tools.Count} tools failed.")
-            .WithErrors(errors);
-
+            .WithReasons(reasons);
     }
 
     // Factory for starting a sequence from a single tool
