@@ -26,7 +26,7 @@ public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
         => await _executor(input, cancellationToken).ConfigureAwait(false);
 
     // Factory for starting a sequence from a single tool
-    public static SequentialTool<TIn, TOut> From(ITool<TIn, TOut> tool)
+    public static SequentialTool<TIn, TOut> Create(ITool<TIn, TOut> tool)
         => new SequentialTool<TIn, TOut>(tool.Transform);
 
     // Adds a new tool with matching input/output transition
@@ -44,4 +44,10 @@ public class SequentialTool<TIn, TOut> : ITool<TIn, TOut>
 
                 return await next.Transform(intermediate.Value, cancellationToken).ConfigureAwait(false);
             });
+}
+
+public static class SequentialTool
+{
+    public static SequentialTool<TIn, TOut> Add<TIn, TOut>(ITool<TIn, TOut> tool) => SequentialTool<TIn, TOut>.Create(tool);
+    public static SequentialTool<Unit, TOut> Add<TOut>(ITool<Unit, TOut> tool) => SequentialTool<Unit, TOut>.Create(tool); // For tools that don't take input (i.e., ITool<Unit, TOut>)
 }
