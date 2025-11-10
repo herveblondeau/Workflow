@@ -14,7 +14,27 @@ using Infrastructure.Downloaders;
 using Core.Models;
 using FluentResults;
 using System.IO.Pipelines;
-using Infrastructure.Workflow;
+using Core.Tools.Workflow;
+using Infrastructure.ChatAgents.OpenRouter;
+using Infrastructure.ChatAgents;
+using Main.Console;
+using Main.Console.Presets;
+
+var youtubeSummary = new YouTubeSummary();
+var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
+if (result.IsFailed)
+{
+    Console.WriteLine("Summarization failed...");
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine($"- {error}");
+    }
+}
+else
+{
+    Console.WriteLine(result.Value);
+}
+return;
 
 // var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
 // firstSuccessfulTool
@@ -41,61 +61,93 @@ using Infrastructure.Workflow;
 //     }
 // );
 
-var workflow = Workflow
+// var sequentialTool = SequentialTool
+//     .Add(new Tool1())
+//     .Add(new Tool2())
+//     .Add(new Tool3())
+//     .Add(new Tool4())
+// ;
+// var firstSuccessfulTool = FirstSuccessfulTool
+//     .Add(new Tool1())
+//     .Add(new Tool2())
+//     .Add(new Tool3())
+//     .Add(new Tool4())
+// ;
+// var conditionalTool = ConditionalTool.If(
+//     condition: n => n >= 30,
+//     thenTool: new Tool3(),
+//     elseTool: new Tool4()
+// );
+// var parallelTool = ParallelTool
+//     .Add(new Tool1()) // ITool<int, int>
+//     .Add(new Tool2()) // ITool<int, int>
+//     .Add(new Tool3()) // ITool<int, int>
+//     .Add(new Tool4()) // ITool<int, int>
+//     .Reduce(async (results, ct) =>
+//     {
+//         return Result.Ok(results.OfType<Result<int>>().Where(r => r.IsSuccess).Sum(r => r.Value));
+//     })
+// ;
+
+// var output = await parallelTool.Transform(45);
+// Console.WriteLine(output.Value);
+
+// var workflow = Workflow
+    // .Add(firstSuccessfulTool)
     // .Add(parallelTool)
-    .Add(new Tool1())
-    .Add(new Tool2())
-    .Add(new Tool3())
-    .Add(new Tool4())
-;
-var result = await workflow.Execute(6);
-if (result.IsFailed)
-{
-    Console.WriteLine("Workflow failed");
-    foreach (var error in result.Errors)
-    {
-        Console.WriteLine(error);
-    }
-    return;
-}
-Console.WriteLine($"Result: {result.Value}");
-return;
+// ;
+// var result = await workflow.Execute(36);
+// if (result.IsFailed)
+// {
+//     Console.WriteLine("Workflow failed");
+//     foreach (var error in result.Errors)
+//     {
+//         Console.WriteLine(error);
+//     }
+//     return;
+// }
+// Console.WriteLine($"Result: {result.Value}");
+// foreach (var success in result.Successes)
+// {
+//     Console.WriteLine(success);
+// }
+// return;
 
-class ToolA : ITool<int, int>
-{
-    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
-        return Task.FromResult(Result.Ok(input));
-    }
-}
+// class ToolA : ITool<int, int>
+// {
+//     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+//         return Task.FromResult(Result.Ok(input));
+//     }
+// }
 
-class ToolB : ITool<int, string>
-{
-    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
-        return Task.FromResult(Result.Ok("TOOL B RESULT"));
-    }
-}
+// class ToolB : ITool<int, string>
+// {
+//     public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+//         return Task.FromResult(Result.Ok("TOOL B RESULT"));
+//     }
+// }
 
-class ToolC : ITool<int, double>
-{
-    public Task<Result<double>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
-        return Task.FromResult(Result.Ok(0.5));
-    }
-}
+// class ToolC : ITool<int, double>
+// {
+//     public Task<Result<double>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+//         return Task.FromResult(Result.Ok(0.5));
+//     }
+// }
 
-class ToolD : ITool<Unit, string>
-{
-    public Task<Result<string>> Transform(Unit _, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
-        return Task.FromResult(Result.Ok("TOOL D RESULT"));
-    }
-}
+// class ToolD : ITool<Unit, int>
+// {
+//     public Task<Result<int>> Transform(Unit _, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
+//         return Task.FromResult(Result.Ok(21));
+//     }
+// }
 
 // var workflow = Workflow
 //     .Add(parallelTool)
@@ -112,89 +164,97 @@ class ToolD : ITool<Unit, string>
 // }
 // Console.WriteLine($"Result: {result.Value}");
 
-class Tool1 : ITool<int, int>
-{
-    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 1 failed"));
-        return Task.FromResult(Result.Ok(input));
-    }
-}
+// class Tool1 : ITool<int, int>
+// {
+//     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 1 failed").WithError("Tool 1 refailed"));
+//         return Task.FromResult(Result.Ok(input).WithSuccess("Tool 1 success"));
+//     }
+// }
 
-class Tool2 : ITool<int, int>
-{
-    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 2 failed"));
-        return Task.FromResult(Result.Ok(input * 2));
-    }
-}
+// class Tool2 : ITool<int, int>
+// {
+//     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 2 failed"));
+//         return Task.FromResult(Result.Ok(input * 2).WithSuccess("Tool 2 success"));
+//     }
+// }
 
-class Tool3 : ITool<int, int>
-{
-    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
-        return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
-        return Task.FromResult(Result.Ok(input * 3));
-    }
-}
+// class Tool3 : ITool<int, int>
+// {
+//     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 3 failed"));
+//         return Task.FromResult(Result.Ok(input * 3).WithSuccess("Tool 3 success"));
+//     }
+// }
 
-class Tool4 : ITool<int, int>
-{
-    public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        // return Task.FromResult(Result.Fail<int>("Tool 4 failed"));
-        return Task.FromResult(Result.Ok(input * 4));
-    }
-}
+// class Tool4 : ITool<int, int>
+// {
+//     public Task<Result<int>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         // return Task.FromResult(Result.Fail<int>("Tool 4 failed"));
+//         return Task.FromResult(Result.Ok(input * 4).WithSuccess("Tool 4 success"));
+//     }
+// }
 
-class Tool5 : ITool<int, string>
-{
-    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result.Ok("Result is 36"));
-    }
-}
+// class Tool5 : ITool<int, string>
+// {
+//     public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         return Task.FromResult(Result.Ok("Result is 36"));
+//     }
+// }
 
-class Tool6 : ITool<int, string>
-{
-    public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result.Ok("Result is NOT 36"));
-    }
-}
+// class Tool6 : ITool<int, string>
+// {
+//     public Task<Result<string>> Transform(int input, CancellationToken cancellationToken = default)
+//     {
+//         return Task.FromResult(Result.Ok("Result is NOT 36"));
+//     }
+// }
 
 /*
 var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
 var sourceLanguage = "en";
 var transcriberModel = GgmlType.Base;
-var sourceUrl = "https://www.youtube.com/watch?v=2jH_pr8nGQU&pp=ugUEEgJlbg%3D%3D";
+var sourceUrl = "https://www.youtube.com/watch?v=wbJoLztTFww&pp=ugUEEgJlbg%3D%3D";
 
 var chatClient = new OpenRouterChatClient("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");
 chatClient.UseModel("google/gemini-2.5-flash-image");
 
 var workflow = Workflow
-    .Add(new YouTubeAudioDownloader(sourceUrl, audioFormat))
-    .Add(new WhisperTranscriber(audioFormat, Path.Combine("/home/tigrou/tmp", $"whisper-model-{transcriberModel.ToString().ToLower()}.bin"), sourceLanguage, transcriberModel))
+    .Add(FirstSuccessfulTool
+        .Add(new YouTubeSubtitlesDownloader(sourceLanguage))
+        .Add(SequentialTool
+            .Add(new YouTubeAudioDownloader(audioFormat))
+            .Add(new WhisperTranscriber(audioFormat, sourceLanguage, transcriberModel))
+        )
+    )
     .Add(new AITextTransformer(new ChatAgent(chatClient), sourceLanguage, new List<string>
     {
-        "This is a transcription of an audio recording.",
-        "Can you write a summary of the main points discussed in the recording?",
-        "The summary MUST be concise and to the point (MAXIMUM 100 words)",
+        "This is a transcription of a very long Youtube video",
+        "Can you write a summary?",
+        "I definitely don't want the detail of every controversy mentioned",
+        // "The summary MUST be concise and to the point (MAXIMUM 100 words)",
     }))
 ;
-var result = await workflow.Execute();
+var result = await workflow.Execute(sourceUrl);
 if (result.IsFailed)
 {
     Console.WriteLine("Workflow failed");
-    foreach (var error in result.Errors)
-    {
-        Console.WriteLine(error.Message);
-    }
-    return;
 }
-Console.WriteLine(result.Value);
+else
+{
+    Console.WriteLine("Workflow succeeded");
+    Console.WriteLine(result.Value);
+}
+foreach (var reason in result.Reasons)
+{
+    Console.WriteLine(reason.Message);
+}
 return;
 */
 

@@ -7,23 +7,20 @@ namespace Infrastructure.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp to be installed and accessible in PATH
-public class YouTubeAudioDownloader : ITool<Unit, Stream>
+public class YouTubeAudioDownloader : ITool<string, Stream>
 {
-    private readonly string _url;
     private readonly AudioFormat _audioFormat;
 
     public YouTubeAudioDownloader(
-        string url,
         AudioFormat audioFormat
     )
     {
         // State = ToolState.Idle;
 
-        _url = url;
         _audioFormat = audioFormat;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<Stream>> Transform(string input, CancellationToken cancellationToken = default)
     {
         // Create a temporary file for yt-dlp to write to
         var tempFile = $"{Path.GetTempFileName()}.wav";
@@ -32,7 +29,7 @@ public class YouTubeAudioDownloader : ITool<Unit, Stream>
         var psi = new ProcessStartInfo
         {
             FileName = "yt-dlp",
-            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {_url} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
+            Arguments = $"-x --audio-format wav --extractor-args \"youtube:player-client=android,web\" {input} --postprocessor-args \"-ar {_audioFormat.SampleRate} -ac {_audioFormat.NbChannels} -sample_fmt s{_audioFormat.BitsPerSample}\" -o \"{tempFile}\"",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
             UseShellExecute = false,

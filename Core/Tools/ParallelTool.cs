@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Core;
 using FluentResults;
 
-namespace Infrastructure.Tools.Workflow;
+namespace Core.Tools.Workflow;
 
 /// <summary>
 /// Runs multiple tools in parallel, then reduces their results into a single one using a reducer

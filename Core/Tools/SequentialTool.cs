@@ -1,7 +1,7 @@
 using Core;
 using FluentResults;
 
-namespace Infrastructure.Tools.Workflow;
+namespace Core.Tools.Workflow;
 
 /// <summary>
 /// Runs multiple tools in sequence

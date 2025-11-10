@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using FluentResults;
 using Core;
 
-namespace Infrastructure.Workflow;
+namespace Core.Tools.Workflow;
 
 /// <summary>
 /// Runs multiple tools in sequence

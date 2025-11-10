@@ -1,0 +1,1 @@
+This folder contains workflows that accomplish common useful tasks. They are supplied for convenience and are TIGHTLY coupled to the components they use. They can be seen as predefined workflows to be used in the presentation layer.

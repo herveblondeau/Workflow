@@ -11,38 +11,37 @@ namespace Infrastructure.Transcribers;
 
 public class WhisperTranscriber : ITool<Stream, string>
 {
-    private readonly string _modelFilePath;
     private readonly string _language;
     private readonly GgmlType _modelType;
+    private readonly string _modelFilePath;
     private readonly AudioFormat _audioFormat;
 
     public WhisperTranscriber(
         AudioFormat audioFormat,
-        string modelFilePath,
         string language,
         GgmlType modelType = GgmlType.Base)
     {
         _audioFormat = audioFormat;
-        _modelFilePath = modelFilePath;
         _language = language;
         _modelType = modelType;
+        _modelFilePath = Path.Combine(Path.GetTempPath(), $"whisper-{modelType}.bin");
     }
 
     public async Task<Result<string>> Transform(Stream input, CancellationToken cancellationToken = default)
     {
-        var tempFile = $"{Path.GetTempFileName()}.wav";
+        var tempWavFile = $"{Path.GetTempFileName()}.wav"; // Whisper requires an actual WAV file to work
 
         input.Position = 0;
         try
         {
-            using (var writer = new WaveFileWriter(tempFile, new WaveFormat(_audioFormat.SampleRate, _audioFormat.BitsPerSample, _audioFormat.NbChannels)))
+            using (var writer = new WaveFileWriter(tempWavFile, new WaveFormat(_audioFormat.SampleRate, _audioFormat.BitsPerSample, _audioFormat.NbChannels)))
             {
                 input.CopyTo(writer);
             }
         }
         catch (Exception ex)
         {
-            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot write WAV file {tempFile}").CausedBy(ex));
+            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot write WAV file {tempWavFile}").CausedBy(ex));
         }
 
         // Initialize Whisper
@@ -51,7 +50,7 @@ public class WhisperTranscriber : ITool<Stream, string>
         {
             try
             {
-                await _downloadModel(_modelFilePath, _modelType);
+                await _downloadModel(_modelType);
             }
             catch (Exception ex)
             {
@@ -67,7 +66,7 @@ public class WhisperTranscriber : ITool<Stream, string>
         StringBuilder transcription = new();
         try
         {
-            using (var fileStream = File.OpenRead(tempFile))
+            using (var fileStream = File.OpenRead(tempWavFile))
             {
                 await foreach (var result in processor.ProcessAsync(fileStream))
                 {
@@ -77,15 +76,17 @@ public class WhisperTranscriber : ITool<Stream, string>
         }
         catch (Exception ex)
         {
-            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot open file {tempFile}").CausedBy(ex));
+            return Result.Fail(new Error($"{nameof(WhisperTranscriber)}: cannot open file {tempWavFile}").CausedBy(ex));
         }
+        Console.WriteLine(transcription);
+        Console.WriteLine();
 
         // Clean up
         try
         {
-            if (File.Exists(tempFile))
+            if (File.Exists(tempWavFile))
             {
-                File.Delete(tempFile);
+                File.Delete(tempWavFile);
             }
         }
         catch {}
@@ -94,10 +95,10 @@ public class WhisperTranscriber : ITool<Stream, string>
     }
 
     // Models are manually downlodable from https://huggingface.co/ggerganov/whisper.cpp/tree/main
-    private static async Task _downloadModel(string fileName, GgmlType ggmlType)
+    private async Task _downloadModel(GgmlType ggmlType)
     {
         using var modelStream = await WhisperGgmlDownloader.Default.GetGgmlModelAsync(ggmlType);
-        using var fileWriter = File.OpenWrite(fileName);
+        using var fileWriter = File.OpenWrite(_modelFilePath);
         await modelStream.CopyToAsync(fileWriter);
     }
 }
