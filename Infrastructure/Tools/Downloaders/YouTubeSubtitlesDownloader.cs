@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Core;
 using FluentResults;
+using Infrastructure.Helpers;
 
 namespace Infrastructure.Downloaders;
 
@@ -40,7 +41,7 @@ public class YouTubeSubtitlesDownloader : ITool<string, string>
         // Build process info
         var psi = new ProcessStartInfo
         {
-            FileName = "yt-dlp",
+            FileName = PathHelpers.GetProcessFilename("yt-dlp"),
             Arguments = $"--skip-download --write-subs --sub-langs {language} -o \"{tempFilePrefix}\" {videoUrl}",
             RedirectStandardError = true,
             RedirectStandardOutput = true,

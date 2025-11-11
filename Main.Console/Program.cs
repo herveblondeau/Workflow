@@ -17,11 +17,43 @@ using System.IO.Pipelines;
 using Core.Tools.Workflow;
 using Infrastructure.ChatAgents.OpenRouter;
 using Infrastructure.ChatAgents;
+using Microsoft.Extensions.Configuration;
 using Main.Console;
 using Main.Console.Presets;
 
-var youtubeSummary = new YouTubeSummary();
-var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
+#region SETTINGS
+string FindSettingsFolder(string startPath)
+{
+    var dir = new DirectoryInfo(startPath);
+    while (dir != null && !File.Exists(Path.Combine(dir.FullName, "appsettings.json")))
+    {
+        dir = dir.Parent;
+    }
+    return dir?.FullName ?? startPath;
+}
+
+var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
+
+var builder = new ConfigurationBuilder()
+    .SetBasePath(FindSettingsFolder(AppContext.BaseDirectory))
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true)
+    .AddUserSecrets<Program>(optional: true)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args);
+
+IConfiguration configuration = builder.Build();
+#endregion
+
+var openRouterApiKey = configuration["ChatClients:OpenRouter:ApiKey"];
+if (openRouterApiKey is null)
+{
+    Console.WriteLine("Undefined Open Router API key");
+    return;
+}
+var youtubeSummary = new YouTubeSummary(openRouterApiKey);
+// var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
+var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs&pp=ugUHEgVlbi1HQg%3D%3D", "en", CancellationToken.None);
 if (result.IsFailed)
 {
     Console.WriteLine("Summarization failed...");
