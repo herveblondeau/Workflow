@@ -17,11 +17,11 @@ public class YouTubeSubtitlesDownloader : ITool<string, string>
         _language = language;
     }
 
-    public async Task<Result<string>> Transform(string input, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(string videoUrl, CancellationToken cancellationToken = default)
     {
         // State = ToolState.Running;
 
-        var result = await _downloadViaYtDlp(input, _language);
+        var result = await _downloadViaYtDlp(videoUrl, _language);
         if (result.IsFailed)
         {
             return result;
