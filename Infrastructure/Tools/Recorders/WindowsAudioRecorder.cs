@@ -1,4 +1,5 @@
 using Core;
+using Core.Models;
 using Core.Recorders;
 using FluentResults;
 using NAudio.CoreAudioApi;
@@ -11,15 +12,11 @@ public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private readonly AudioFormat _audioFormat;
 
-    public WindowsAudioRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
+    public WindowsAudioRecorder(AudioFormat audioFormat)
     {
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
         // State = ToolState.Idle;
     }
 
@@ -27,7 +24,7 @@ public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
     {
         try
         {
-            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {

@@ -51,20 +51,44 @@ if (openRouterApiKey is null)
     Console.WriteLine("Undefined Open Router API key");
     return;
 }
-var youtubeSummary = new YouTubeSummary(openRouterApiKey);
-// var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
-var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs", "en", CancellationToken.None);
-if (result.IsFailed)
+// var youtubeSummary = new YouTubeSummary(openRouterApiKey);
+// // var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
+// var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs", "en", CancellationToken.None);
+// if (result.IsFailed)
+// {
+//     Console.WriteLine("Summarization failed...");
+//     foreach (var error in result.Errors)
+//     {
+//         Console.WriteLine($"- {error}");
+//     }
+// }
+// else
+// {
+//     Console.WriteLine(result.Value);
+// }
+// return;
+
+MeetingMinutes meetingMinutes = new MeetingMinutes(openRouterApiKey, async (cancellationToken) =>
+{
+    Console.Write("Recording started... Press ENTER to stop...");
+    await Task.Run(() =>
+    {
+        Console.ReadLine();
+        Console.WriteLine("Stopping recording...");
+    }, cancellationToken);
+});
+var meetingSummary = await meetingMinutes.Summarize("en", CancellationToken.None);
+if (meetingSummary.IsFailed)
 {
     Console.WriteLine("Summarization failed...");
-    foreach (var error in result.Errors)
+    foreach (var error in meetingSummary.Errors)
     {
         Console.WriteLine($"- {error}");
     }
 }
 else
 {
-    Console.WriteLine(result.Value);
+    Console.WriteLine(meetingSummary.Value);
 }
 return;
 

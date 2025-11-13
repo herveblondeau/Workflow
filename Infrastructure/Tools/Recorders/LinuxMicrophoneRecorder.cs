@@ -1,4 +1,5 @@
 using Core;
+using Core.Models;
 using Core.Recorders;
 using FluentResults;
 using OpenTK.Audio.OpenAL;
@@ -11,24 +12,20 @@ public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
     private MemoryStream _micStream = null!;
     private CancellationTokenSource _cancellationTokenSource = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private readonly AudioFormat _audioFormat;
 
-    public LinuxMicrophoneRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
+    public LinuxMicrophoneRecorder(AudioFormat audioFormat)
     {
         // State = ToolState.Idle;
 
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
     }
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
-            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {

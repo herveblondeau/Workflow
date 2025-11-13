@@ -1,4 +1,5 @@
 using Core;
+using Core.Models;
 using Core.Recorders;
 using FluentResults;
 using NAudio.Wave;
@@ -10,24 +11,20 @@ public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private readonly AudioFormat _audioFormat;
 
-    public WindowsMicrophoneRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
+    public WindowsMicrophoneRecorder(AudioFormat audioFormat)
     {
         // State = ToolState.Idle;
 
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
     }
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
-            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {

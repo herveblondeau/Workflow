@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Core;
 using FluentResults;
-using Infrastructure.Helpers;
 
 namespace Infrastructure.Downloaders;
 

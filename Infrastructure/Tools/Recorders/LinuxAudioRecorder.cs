@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Core;
+using Core.Models;
 using Core.Recorders;
 using FluentResults;
 
@@ -16,24 +17,20 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
     private Process _ffmpeg = null!;
     private MemoryStream _audioStream = null!;
     public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private readonly AudioFormat _audioFormat;
 
-    public LinuxAudioRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
+    public LinuxAudioRecorder(AudioFormat audioFormat)
     {
         // State = ToolState.Idle;
 
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
     }
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
-            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {

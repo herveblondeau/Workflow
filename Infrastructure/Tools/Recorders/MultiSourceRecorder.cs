@@ -1,4 +1,5 @@
 ﻿using Core;
+using Core.Models;
 using Core.Recorders;
 using FluentResults;
 
@@ -10,35 +11,43 @@ public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
     private MemoryStream _mixedStream = null!;
     private int _bitsPerSample;
     private int _sampleRate;
-    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
-    private readonly int _targetSampleRate;
-    private readonly int _targetBitsPerSample;
-    private readonly int _targetNbChannels;
+    private Func<CancellationToken, Task>? _waitForStopSignal { get; set; }
+    private readonly AudioFormat _audioFormat;
 
-    public MultiSourceRecorder(int targetSampleRate, int targetBitsPerSample, int targetNbChannels)
+    public MultiSourceRecorder(AudioFormat audioFormat)
     {
         // State = ToolState.Idle;
 
         _sources = new();
-        _targetSampleRate = targetSampleRate;
-        _targetBitsPerSample = targetBitsPerSample;
-        _targetNbChannels = targetNbChannels;
+        _audioFormat = audioFormat;
+    }
+
+    public MultiSourceRecorder AddSource(IStreamRecorder source)
+    {
+        _sources.Add(source);
+        return this;
+    }
+
+    public MultiSourceRecorder AddStopSignal(Func<CancellationToken, Task> waitForStopSignal)
+    {
+        _waitForStopSignal = waitForStopSignal;
+        return this;
     }
 
     public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
-            Start(_targetSampleRate, _targetNbChannels, _targetBitsPerSample);
+            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
             return Result.Fail(new Error($"{nameof(MultiSourceRecorder)}: cannot start recording").CausedBy(ex));
         }
 
-        if (WaitForStopSignal is not null)
+        if (_waitForStopSignal is not null)
         {
-            await WaitForStopSignal.Invoke(cancellationToken);
+            await _waitForStopSignal.Invoke(cancellationToken);
         }
 
         try
