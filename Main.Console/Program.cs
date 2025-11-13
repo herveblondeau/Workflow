@@ -53,7 +53,7 @@ if (openRouterApiKey is null)
 }
 var youtubeSummary = new YouTubeSummary(openRouterApiKey);
 // var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
-var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs&pp=ugUHEgVlbi1HQg%3D%3D", "en", CancellationToken.None);
+var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs", "en", CancellationToken.None);
 if (result.IsFailed)
 {
     Console.WriteLine("Summarization failed...");

@@ -41,7 +41,7 @@ public class YouTubeSubtitlesDownloader : ITool<string, string>
         // Build process info
         var psi = new ProcessStartInfo
         {
-            FileName = PathHelpers.GetProcessFilename("yt-dlp"),
+            FileName = "yt-dlp",
             Arguments = $"--skip-download --write-subs --sub-langs {language} -o \"{tempFilePrefix}\" {videoUrl}",
             RedirectStandardError = true,
             RedirectStandardOutput = true,
