@@ -6,7 +6,7 @@ using FluentResults;
 namespace Infrastructure.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
-// Requires yt-dlp to be installed and accessible in PATH
+// Requires yt-dlp and ffmpeg to be installed and accessible in PATH
 public class YouTubeAudioDownloader : ITool<string, Stream>
 {
     private readonly AudioFormat _audioFormat;
