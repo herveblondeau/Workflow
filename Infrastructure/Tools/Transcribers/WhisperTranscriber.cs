@@ -1,4 +1,3 @@
-using System.Runtime.Intrinsics.X86;
 using System.Text;
 using Whisper.net;
 using NAudio.Wave;
@@ -9,7 +8,7 @@ using FluentResults;
 
 namespace Infrastructure.Transcribers;
 
-public class WhisperTranscriber : ITool<Stream, string>
+public class WhisperTranscriber : ITool<AudioStream, string>
 {
     private readonly string _language;
     private readonly GgmlType _modelType;
@@ -27,7 +26,7 @@ public class WhisperTranscriber : ITool<Stream, string>
         _modelFilePath = Path.Combine(Path.GetTempPath(), $"whisper-{modelType}.bin");
     }
 
-    public async Task<Result<string>> Transform(Stream input, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(AudioStream input, CancellationToken cancellationToken = default)
     {
         var tempWavFile = $"{Path.GetTempFileName()}.wav"; // Whisper requires an actual WAV file to work
 

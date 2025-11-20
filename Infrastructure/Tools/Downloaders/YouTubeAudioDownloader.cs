@@ -2,12 +2,13 @@ using System.Diagnostics;
 using Core;
 using Core.Models;
 using FluentResults;
+using NAudio.CoreAudioApi;
 
 namespace Infrastructure.Downloaders;
 
 // Downloader that fetches audio from YouTube videos
 // Requires yt-dlp and ffmpeg to be installed and accessible in PATH
-public class YouTubeAudioDownloader : ITool<string, Stream>
+public class YouTubeAudioDownloader : ITool<string, AudioStream>
 {
     private readonly AudioFormat _audioFormat;
 
@@ -20,7 +21,7 @@ public class YouTubeAudioDownloader : ITool<string, Stream>
         _audioFormat = audioFormat;
     }
 
-    public async Task<Result<Stream>> Transform(string videoUrl, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(string videoUrl, CancellationToken cancellationToken = default)
     {
         // Create a temporary file for yt-dlp to write to
         var tempFile = $"{Path.GetTempFileName()}.wav";
@@ -62,7 +63,7 @@ public class YouTubeAudioDownloader : ITool<string, Stream>
             {
                 return Result.Fail(new Error($"{nameof(YouTubeAudioDownloader)}: yt-dlp cannot open stream on file {tempFile}").CausedBy(ex));
             }
-            return stream;
+            return new AudioStream(stream);
         }
         finally
         {
