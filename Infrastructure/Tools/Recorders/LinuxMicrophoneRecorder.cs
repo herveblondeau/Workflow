@@ -6,7 +6,7 @@ using OpenTK.Audio.OpenAL;
 
 namespace Infrastructure.Recorders;
 
-public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
+public class LinuxMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
     private ALCaptureDevice _captureDevice;
     private MemoryStream _micStream = null!;
@@ -21,7 +21,7 @@ public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
         _audioFormat = audioFormat;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -52,7 +52,7 @@ public class LinuxMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
             return Result.Fail($"{nameof(LinuxMicrophoneRecorder)}: recorded stream is unavailable");
         }
 
-        return stream;
+        return new AudioStream(stream);
     }
 
 

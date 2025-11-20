@@ -1,7 +1,6 @@
 using Core;
 using Core.Models;
-using FileSignatures;
-using FileSignatures.Formats;
+using FileTypeChecker.Extensions;
 using FluentResults;
 
 namespace Infrastructure.Files;
@@ -27,13 +26,12 @@ public class ImageFileReader : ITool<string, ImageStream>
             return Result.Fail(new Error($"Failed to open file: {ex.Message}").CausedBy(ex));
         }
 
-        var inspector = new FileFormatInspector();
-        var format = inspector.DetermineFileFormat(fileStream);
-        if (format == null || format is not Image)
+        if (!fileStream.IsImage())
         {
             fileStream.Dispose();
-            return Result.Fail<ImageStream>("The file is not a valid image.");
+            return Result.Fail<ImageStream>($"The file ({filePath}) is not a valid image.");
         }
+        fileStream.Position = 0; // FileTypeChecker reads some bytes and doesn't reset the position; we must do it ourselves
 
         return Result.Ok(new ImageStream(fileStream));
     }

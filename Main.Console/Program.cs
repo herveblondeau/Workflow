@@ -20,6 +20,8 @@ using Main.Console;
 using Main.Console.Presets;
 using Infrastructure.Tools.Transcribers;
 using Infrastructure.Files;
+using FileTypeChecker;
+using FileTypeChecker.Abstracts;
 
 #region SETTINGS
 string FindSettingsFolder(string startPath)
@@ -70,20 +72,37 @@ if (openRouterApiKey is null)
 // }
 // return;
 
-var sourceLanguage = "ja";
-var chatClient = new OpenRouterChatClient(openRouterApiKey);
-chatClient.UseModel("google/gemini-2.5-flash-image");
+// var sourceLanguage = "ja";
+// var chatClient = new OpenRouterChatClient(openRouterApiKey);
+// chatClient.UseModel("google/gemini-2.5-flash-image");
+// var workflow = Workflow
+//     .Add(new ImageFileReader())
+//     .Add(new TesseractOcrTranscriber(sourceLanguage))
+//     .Add(new AITextTransformer(new ChatAgent(chatClient),sourceLanguage, new List<string>
+//     {
+//         "This is a text extracted from an image using OCR",
+//         "It contains one or more interview questions",
+//         "Can you list and answer these questions?",
+//         "Each answer must be concise and to the point (one sentence if possible)",
+//         "If the content is not in English, translate it to English first and please tell me which language it was originally in",
+//     }))
+// ;
+
+// var result = await workflow.Execute("/home/tigrou/Downloads/tesseract/temp3.png");
+// if (result.IsFailed)
+// {
+//     Console.WriteLine("Workflow failed");
+//     foreach (var error in result.Errors)
+//     {
+//         Console.WriteLine(error);
+//     }
+//     return;
+// }
+// Console.WriteLine($"Result: {result.Value}");
+// return;
+
 var workflow = Workflow
-    .Add(new ImageFileReader())
-    .Add(new TesseractOcrTranscriber(sourceLanguage))
-    .Add(new AITextTransformer(new ChatAgent(chatClient),sourceLanguage, new List<string>
-    {
-        "This is a text extracted from an image using OCR",
-        "It contains one or more interview questions",
-        "Can you list and answer these questions?",
-        "Each answer must be concise and to the point (one sentence if possible)",
-        "If the content is not in English, translate it to English first and please tell me which language it was originally in",
-    }))
+    .Add(new AudioFileReader())
 ;
 
 var result = await workflow.Execute("/home/tigrou/Downloads/tesseract/temp3.png");

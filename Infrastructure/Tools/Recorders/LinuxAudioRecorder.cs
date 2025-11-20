@@ -3,6 +3,7 @@ using Core;
 using Core.Models;
 using Core.Recorders;
 using FluentResults;
+using NAudio.CoreAudioApi;
 
 namespace Infrastructure.Recorders;
 
@@ -10,7 +11,7 @@ namespace Infrastructure.Recorders;
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
 // - bash is also required
-public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
+public class LinuxAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
     private CancellationTokenSource _cts = null!;
     private Task _readTask = null!;
@@ -26,7 +27,7 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         _audioFormat = audioFormat;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -57,7 +58,7 @@ public class LinuxAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
             return Result.Fail($"{nameof(LinuxAudioRecorder)}: recorded stream is unavailable");
         }
 
-        return stream;
+        return new AudioStream(stream);
     }
 
    public void Start(int sampleRate, int nbChannels, int bitsPerSample)

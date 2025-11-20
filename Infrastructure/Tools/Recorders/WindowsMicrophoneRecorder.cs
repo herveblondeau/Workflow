@@ -6,7 +6,7 @@ using NAudio.Wave;
 
 namespace Infrastructure.Recorders;
 
-public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
+public class WindowsMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
     private WaveInEvent _micCapture = null!;
     private MemoryStream _micStream = null!;
@@ -20,7 +20,7 @@ public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
         _audioFormat = audioFormat;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -51,7 +51,7 @@ public class WindowsMicrophoneRecorder : ITool<Unit, Stream>, IStreamRecorder
             return Result.Fail($"{nameof(WindowsMicrophoneRecorder)}: recorded stream is unavailable");
         }
 
-        return stream;
+        return new AudioStream(stream);
     }
 
 

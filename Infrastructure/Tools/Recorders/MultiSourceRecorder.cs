@@ -5,7 +5,7 @@ using FluentResults;
 
 namespace Infrastructure.Recorders;
 
-public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
+public class MultiSourceRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
     private readonly List<IStreamRecorder> _sources;
     private MemoryStream _mixedStream = null!;
@@ -34,7 +34,7 @@ public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
         return this;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -65,7 +65,7 @@ public class MultiSourceRecorder : ITool<Unit, Stream>, IStreamRecorder
             return Result.Fail($"{nameof(MultiSourceRecorder)}: recorded stream is unavailable");
         }
 
-        return stream;
+        return new AudioStream(stream);
     }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)

@@ -7,7 +7,7 @@ using NAudio.Wave;
 
 namespace Infrastructure.Recorders;
 
-public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
+public class WindowsAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
     private WasapiLoopbackCapture _audioCapture = null!;
     private MemoryStream _audioStream = null!;
@@ -20,7 +20,7 @@ public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
         // State = ToolState.Idle;
     }
 
-    public async Task<Result<Stream>> Transform(Unit _, CancellationToken cancellationToken = default)
+    public async Task<Result<AudioStream>> Transform(Unit _, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -51,7 +51,7 @@ public class WindowsAudioRecorder : ITool<Unit, Stream>, IStreamRecorder
             return Result.Fail($"{nameof(WindowsAudioRecorder)}: recorded stream is unavailable");
         }
 
-        return stream;
+        return new AudioStream(stream);
     }
 
     public void Start(int sampleRate, int nbChannels, int bitsPerSample)
