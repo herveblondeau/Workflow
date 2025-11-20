@@ -1,0 +1,43 @@
+@Main.Api_HostAddress = http://localhost:5261
+
+GET {{Main.Api_HostAddress}}/api/analysis/status
+Accept: application/json
+
+###
+
+#POST {{Main.Api_HostAddress}}/api/analysis/text
+POST {{Main.Api_HostAddress}}/api/analysis/text
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "Please summarize the main points of this text.",
+    "language": "en",
+    "text": "Artificial intelligence (AI) is transforming various industries by automating tasks, enhancing decision-making, and improving customer experiences. From healthcare to finance, AI technologies are being integrated to drive innovation and efficiency."
+}
+
+###
+
+POST {{Main.Api_HostAddress}}/api/analysis/text
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "Translate this text to French.",
+    "language": "fr",
+    "text": "Hello, how are you today?"
+}
+
+###
+
+POST {{Main.Api_HostAddress}}/api/analysis/text
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "",
+    "language": null,
+    "text": "This is a test without custom instructions. It should use the default instruction."
+}
+
+###
