@@ -1,8 +1,6 @@
 ﻿using Core;
 using Core.ChatAgents;
 using Whisper.net.Ggml;
-using YoutubeExplode;
-using YoutubeExplode.Videos.Streams;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Net;
@@ -20,6 +18,8 @@ using Infrastructure.ChatAgents;
 using Microsoft.Extensions.Configuration;
 using Main.Console;
 using Main.Console.Presets;
+using Infrastructure.Tools.Transcribers;
+using Infrastructure.Files;
 
 #region SETTINGS
 string FindSettingsFolder(string startPath)
@@ -43,7 +43,6 @@ var builder = new ConfigurationBuilder()
     .AddCommandLine(args);
 
 IConfiguration configuration = builder.Build();
-#endregion
 
 var openRouterApiKey = configuration["ChatClients:OpenRouter:ApiKey"];
 if (openRouterApiKey is null)
@@ -51,9 +50,12 @@ if (openRouterApiKey is null)
     Console.WriteLine("Undefined Open Router API key");
     return;
 }
+
+#endregion
+
 // var youtubeSummary = new YouTubeSummary(openRouterApiKey);
 // // var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=PkbjvbjLAug&t=275s", "en", customQuestion: "Can you tell me which key combination the Primagen uses to delete a line? I think he explains that in order to delete a line, instead of using dd, he types two keys alternating fingers, but I don't remember which ones", CancellationToken.None);
-// var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=-6KHhwEMtqs", "en", CancellationToken.None);
+// var result = await youtubeSummary.Summarize("https://www.youtube.com/watch?v=znQToRxsrCo&pp=ygULcm9iIGJyYXhtYW4%3D", "en", CancellationToken.None);
 // if (result.IsFailed)
 // {
 //     Console.WriteLine("Summarization failed...");
@@ -68,6 +70,36 @@ if (openRouterApiKey is null)
 // }
 // return;
 
+var sourceLanguage = "ja";
+var chatClient = new OpenRouterChatClient(openRouterApiKey);
+chatClient.UseModel("google/gemini-2.5-flash-image");
+var workflow = Workflow
+    .Add(new ImageFileReader())
+    .Add(new TesseractOcrTranscriber(sourceLanguage))
+    .Add(new AITextTransformer(new ChatAgent(chatClient),sourceLanguage, new List<string>
+    {
+        "This is a text extracted from an image using OCR",
+        "It contains one or more interview questions",
+        "Can you list and answer these questions?",
+        "Each answer must be concise and to the point (one sentence if possible)",
+        "If the content is not in English, translate it to English first and please tell me which language it was originally in",
+    }))
+;
+
+var result = await workflow.Execute("/home/tigrou/Downloads/tesseract/temp3.png");
+if (result.IsFailed)
+{
+    Console.WriteLine("Workflow failed");
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine(error);
+    }
+    return;
+}
+Console.WriteLine($"Result: {result.Value}");
+return;
+
+/*
 MeetingMinutes meetingMinutes = new MeetingMinutes(openRouterApiKey, async (cancellationToken) =>
 {
     Console.Write("Recording started... Press ENTER to stop...");
@@ -91,6 +123,7 @@ else
     Console.WriteLine(meetingSummary.Value);
 }
 return;
+*/
 
 // var firstSuccessfulTool = new FirstSuccessfulTool<int, int>();
 // firstSuccessfulTool

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Core;
+using Core.Models;
 using FluentResults;
 
 namespace Infrastructure.Tools.Transcribers;
@@ -8,7 +9,7 @@ namespace Infrastructure.Tools.Transcribers;
 // Requires Tesseract (https://github.com/tesseract-ocr/tesseract?tab=readme-ov-file) to be installed and accessible in PATH
 // Language codes supported: "en" (English), "fr" (French), "ja" (Japanese)
 // Language files must be downloaded (https://github.com/tesseract-ocr/tessdata). They must placed in the default folder, which depends on the OS (example for Linux: /usr/local/share/tesseract/tessdata/), or anywhere else by specifying a custom folder in the TESSDATA_PREFIX environment variable.
-public class TesseractOcrTranscriber : ITool<Stream, string>
+public class TesseractOcrTranscriber : ITool<ImageStream, string>
 {
     private readonly string _language;
 
@@ -17,7 +18,7 @@ public class TesseractOcrTranscriber : ITool<Stream, string>
         _language = language;
     }
 
-    public async Task<Result<string>> Transform(Stream input, CancellationToken cancellationToken = default)
+    public async Task<Result<string>> Transform(ImageStream input, CancellationToken cancellationToken = default)
     {
         var tesseractLanguageCode = _convertLanguageToTesseractCode(_language);
         if (tesseractLanguageCode == null)
