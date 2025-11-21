@@ -18,6 +18,10 @@ namespace Main.Api
     public class AnalysisController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public AnalysisController(IConfiguration configuration)
         {
@@ -107,7 +111,7 @@ namespace Main.Api
             ImageTransformMetadata? metadataObj;
             try
             {
-                metadataObj = JsonSerializer.Deserialize<ImageTransformMetadata>(metadata);
+                metadataObj = JsonSerializer.Deserialize<ImageTransformMetadata>(metadata, _jsonOptions);
                 if (metadataObj == null)
                 {
                     return BadRequest(new { error = "Invalid metadata format." });

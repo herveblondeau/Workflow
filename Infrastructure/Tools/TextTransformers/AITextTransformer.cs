@@ -23,9 +23,14 @@ public class AITextTransformer : ITool<string, string>
     {
         _chatAgent.InitializeConversation();
 
-        var prompt = @$"Here is some content in the language '{_language}': {input}
-            Please transform it according to the following instructions:
-            " + string.Join(Environment.NewLine, _instructions.Select(l => $"- {l}"));
+        var prompt = $"I am going to give you some content in the language '{_language}'. Please process it according to the following instructions:"
+            + Environment.NewLine
+            + string.Join(Environment.NewLine, _instructions.Select(l => $"- {l}"))
+            + Environment.NewLine
+            + Environment.NewLine
+            + "Here is the content:"
+            + Environment.NewLine
+            + input;
         try
         {
             return Result.Ok(await _chatAgent.Prompt(prompt));
