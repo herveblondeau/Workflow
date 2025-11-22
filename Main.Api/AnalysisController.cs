@@ -10,6 +10,11 @@ using Core;
 using System.Text.Json;
 using Infrastructure.Files;
 using Infrastructure.Tools.Transcribers;
+using Infrastructure.Downloaders;
+using Core.Models;
+using Whisper.net.Ggml;
+using Infrastructure.Transcribers;
+using FluentResults;
 
 namespace Main.Api
 {
@@ -184,7 +189,7 @@ namespace Main.Api
                     return StatusCode(500, new { error = "Image processing failed.", details = errors });
                 }
 
-                return Ok(new { success = result.IsSuccess, result = result.Value, source = metadataObj.Source });
+                return Ok(new { success = result.IsSuccess, result = result.Value });
             }
             catch (Exception ex)
             {
@@ -204,6 +209,105 @@ namespace Main.Api
                 {
                     // Ignore cleanup errors
                 }
+            }
+        }
+
+        [HttpPost("url")]
+        public async Task<IActionResult> TransformUrl([FromBody] URLTransformRequest request, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(request.Text))
+            {
+                return BadRequest(new { error = "URL is required." });
+            }
+
+            var openRouterApiKey = _configuration["ChatClients:OpenRouter:ApiKey"];
+            if (string.IsNullOrEmpty(openRouterApiKey))
+            {
+                return StatusCode(500, new { error = "OpenRouter API key is not configured." });
+            }
+
+            // Use default language if not provided or auto
+            var language = request.Language ?? "en";
+
+            // Prepare instructions - split by newlines if multiple instructions provided
+            var instructions = new List<string>();
+            if (!string.IsNullOrWhiteSpace(request.Instructions))
+            {
+                // Split by newline and filter out empty lines
+                instructions.AddRange(
+                    request.Instructions
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(i => i.Trim())
+                        .Where(i => !string.IsNullOrEmpty(i))
+                );
+            }
+
+            try
+            {
+                var chatClient = new OpenRouterChatClient(openRouterApiKey);
+                chatClient.UseModel("google/gemini-2.5-flash-image");
+
+                Result<string> result;
+
+                // Check if URL contains "youtube" (case-insensitive)
+                if (request.Text.Contains("youtube", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Use YouTube workflow similar to YouTubeSummary
+                    var audioFormat = new AudioFormat(SampleRate: 16000, BitsPerSample: 16, NbChannels: 1);
+                    var transcriberModel = GgmlType.Base;
+
+                    // Prepare instructions for YouTube video
+                    var youtubeInstructions = new List<string>
+                    {
+                        "This is a transcription of a Youtube video"
+                    };
+                    if (instructions.Count > 0)
+                    {
+                        youtubeInstructions.AddRange(instructions);
+                    }
+                    else
+                    {
+                        youtubeInstructions.Add("Can you write a summary?");
+                    }
+
+                    var workflow = Workflow
+                        .Add(FirstSuccessfulTool
+                            .Add(new YouTubeSubtitlesDownloader(language))
+                            .Add(SequentialTool
+                                .Add(new YouTubeAudioDownloader(audioFormat))
+                                .Add(new WhisperTranscriber(audioFormat, language, transcriberModel))
+                            )
+                        )
+                        .Add(new AITextTransformer(new ChatAgent(chatClient), language, youtubeInstructions));
+
+                    result = await workflow.Execute(request.Text, cancellationToken);
+                }
+                else
+                {
+                    // Use URLDownloader for other URLs
+                    if (instructions.Count == 0)
+                    {
+                        instructions.Add("Please analyze the content from this URL and provide a summary of the main points.");
+                    }
+
+                    var workflow = Workflow
+                        .Add(new URLDownloader())
+                        .Add(new AITextTransformer(new ChatAgent(chatClient), language, instructions));
+
+                    result = await workflow.Execute(request.Text, cancellationToken);
+                }
+
+                if (result.IsFailed)
+                {
+                    var errors = result.Errors.Select(e => e.Message).ToList();
+                    return StatusCode(500, new { error = "URL processing failed.", details = errors });
+                }
+
+                return Ok(new { success = result.IsSuccess, result = result.Value });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred while processing the request.", details = ex.Message });
             }
         }
     }

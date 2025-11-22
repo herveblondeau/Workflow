@@ -63,3 +63,42 @@ Content-Type: image/png
 ------WebKitFormBoundary7MA4YWxkTrZu0gW--
 
 ###
+
+POST {{Main.Api_HostAddress}}/api/analysis/url
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "Please summarize the main points of this YouTube video.",
+    "language": "en",
+    "source": "test",
+    "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+}
+
+###
+
+POST {{Main.Api_HostAddress}}/api/analysis/url
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "Please summarize the content from this webpage.",
+    "language": "en",
+    "source": "test",
+    "url": "https://example.com/article"
+}
+
+###
+
+POST {{Main.Api_HostAddress}}/api/analysis/url
+Content-Type: application/json
+Accept: application/json
+
+{
+    "instructions": "",
+    "language": null,
+    "source": "test",
+    "url": "https://example.com/content"
+}
+
+###
