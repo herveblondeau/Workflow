@@ -7,6 +7,6 @@ public class ImageTransformMetadata
     public string Source { get; set; } = string.Empty;
     public double? CssWidth { get; set; }
     public double? CssHeight { get; set; }
-    public int? PixelWidth { get; set; }
-    public int? PixelHeight { get; set; }
+    public double? PixelWidth { get; set; }
+    public double? PixelHeight { get; set; }
 }
