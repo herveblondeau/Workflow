@@ -20,6 +20,7 @@ namespace Main.Api
 {
     [Route("api/analysis")]
     [ApiController]
+    // TODO: make tools injectable
     public class AnalysisController : ControllerBase
     {
         private readonly IConfiguration _configuration;
