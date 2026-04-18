@@ -54,7 +54,7 @@ public static class ParallelTool
 
         private ParallelToolBuilder(
             IReadOnlyList<object> tools,
-            Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>> asyncReducer)
+            Func<IReadOnlyList<object>, CancellationToken, Task<Result<TOut>>>? asyncReducer)
         {
             _tools = tools;
             _asyncReducer = asyncReducer;
