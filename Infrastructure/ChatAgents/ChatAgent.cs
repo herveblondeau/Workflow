@@ -23,7 +23,7 @@ public class ChatAgent : IChatAgent
     public async Task<string> SetGuidelines(string guidelines)
     {
         _conversation.AddSystemInput(guidelines);
-        var response = await _chatClient.GetResponseAsync(_conversation.Messages);
+        var response = await _chatClient.GetResponseAsync(_conversation.Messages.ToList());
         _conversation.AddAssistantInput(response.Text);
         return response.Text;
     }
@@ -34,7 +34,7 @@ public class ChatAgent : IChatAgent
         if (supplyHistory)
         {
             _conversation.AddUserInput(prompt);
-            response = await _chatClient.GetResponseAsync(_conversation.Messages);
+            response = await _chatClient.GetResponseAsync(_conversation.Messages.ToList());
             _conversation.AddAssistantInput(response.Text);
         }
         else

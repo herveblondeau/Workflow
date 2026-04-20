@@ -10,9 +10,11 @@ public class URLDownloader : ITool<string, string>
 {
     private readonly HttpClient _httpClient;
 
-    public URLDownloader()
+    public URLDownloader() : this(new HttpClient()) { }
+
+    public URLDownloader(HttpClient httpClient)
     {
-        _httpClient = new HttpClient();
+        _httpClient = httpClient;
     }
 
     public async Task<Result<string>> Transform(string url, CancellationToken cancellationToken = default)

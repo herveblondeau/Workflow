@@ -1,17 +1,17 @@
 ﻿using Core;
-using Infrastructure.ChatAgents;
+using Core.ChatAgents;
 using FluentResults;
 
 namespace Infrastructure.TextTransformers;
 
 public class AITextTransformer : ITool<string, string>
 {
-    private readonly ChatAgent _chatAgent;
+    private readonly IChatAgent _chatAgent;
     private readonly string _language;
 
     private readonly IEnumerable<string> _instructions;
 
-    public AITextTransformer(ChatAgent chatAgent, string language, IEnumerable<string> instructions)
+    public AITextTransformer(IChatAgent chatAgent, string language, IEnumerable<string> instructions)
     {
         _chatAgent = chatAgent;
         _language = language;
