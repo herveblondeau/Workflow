@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Main.Api.Models;
 using Infrastructure.ChatAgents;
-using Infrastructure.ChatAgents.OpenRouter;
 using Infrastructure.TextTransformers;
 using Core.Tools.Workflow;
-using Microsoft.Extensions.Configuration;
 using Core;
 using System.Text.Json;
 using Infrastructure.Files;
@@ -23,22 +22,23 @@ namespace Main.Api
     // TODO: make tools injectable
     public class AnalysisController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly IChatClientFactory _chatClientFactory;
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public AnalysisController(IConfiguration configuration)
+        public AnalysisController(IChatClientFactory chatClientFactory)
         {
-            _configuration = configuration;
+            _chatClientFactory = chatClientFactory;
         }
 
-        // [HttpGet("status")]
-        // public IActionResult GetStatus()
-        // {
-        //     return Ok(new { status = "Analysis service is running." });
-        // }
+        [HttpGet("status")]
+        [AllowAnonymous]
+        public IActionResult GetStatus()
+        {
+            return NoContent();
+        }
 
         [HttpPost("text")]
         public async Task<IActionResult> TransformText([FromBody] TextTransformRequest request, CancellationToken cancellationToken)
@@ -46,12 +46,6 @@ namespace Main.Api
             if (string.IsNullOrWhiteSpace(request.Text))
             {
                 return BadRequest(new { error = "Text is required." });
-            }
-
-            var openRouterApiKey = _configuration["ChatClients:OpenRouter:ApiKey"];
-            if (string.IsNullOrEmpty(openRouterApiKey))
-            {
-                return StatusCode(500, new { error = "OpenRouter API key is not configured." });
             }
 
             // Use default language if not provided or auto
@@ -78,8 +72,7 @@ namespace Main.Api
 
             try
             {
-                var chatClient = new OpenRouterChatClient(openRouterApiKey);
-                chatClient.UseModel("google/gemini-2.5-flash-image");
+                var chatClient = _chatClientFactory.Create(request.Provider, request.Model);
 
                 var workflow = Workflow
                     .Add(new AITextTransformer(new ChatAgent(chatClient), language, instructions));
@@ -128,12 +121,6 @@ namespace Main.Api
                 return BadRequest(new { error = "Failed to parse metadata JSON.", details = ex.Message });
             }
 
-            var openRouterApiKey = _configuration["ChatClients:OpenRouter:ApiKey"];
-            if (string.IsNullOrEmpty(openRouterApiKey))
-            {
-                return StatusCode(500, new { error = "OpenRouter API key is not configured." });
-            }
-
             // Use default language if not provided or auto
             var language = metadataObj.Language ?? "en";
 
@@ -174,8 +161,7 @@ namespace Main.Api
                     await image.CopyToAsync(fileStream, cancellationToken);
                 }
 
-                var chatClient = new OpenRouterChatClient(openRouterApiKey);
-                chatClient.UseModel("google/gemini-2.5-flash-image");
+                var chatClient = _chatClientFactory.Create(metadataObj.Provider, metadataObj.Model);
 
                 var workflow = Workflow
                     .Add(new ImageFileReader())
@@ -221,12 +207,6 @@ namespace Main.Api
                 return BadRequest(new { error = "URL is required." });
             }
 
-            var openRouterApiKey = _configuration["ChatClients:OpenRouter:ApiKey"];
-            if (string.IsNullOrEmpty(openRouterApiKey))
-            {
-                return StatusCode(500, new { error = "OpenRouter API key is not configured." });
-            }
-
             // Use default language if not provided or auto
             var language = request.Language ?? "en";
 
@@ -245,8 +225,7 @@ namespace Main.Api
 
             try
             {
-                var chatClient = new OpenRouterChatClient(openRouterApiKey);
-                chatClient.UseModel("google/gemini-2.5-flash-image");
+                var chatClient = _chatClientFactory.Create(request.Provider, request.Model);
 
                 Result<string> result;
 
