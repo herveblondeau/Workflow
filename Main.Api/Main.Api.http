@@ -1,7 +1,9 @@
 ###
 
-@ApiKey = SUPPLY_THIS_VALUE_FROM_ENV_OR_CONFIG
+@ApiKey = HARD_TO_GUESS_SECRET_API_KEY
 @BaseUrl = http://localhost:5261
+@Model =
+@Provider = anthropic
 
 
 ###
@@ -20,6 +22,8 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "Please summarize the main points of this text.",
   "language": "en",
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "text": "Artificial intelligence (AI) is transforming various industries by automating tasks, enhancing decision-making, and improving customer experiences. From healthcare to finance, AI technologies are being integrated to drive innovation and efficiency."
 }
 
@@ -34,6 +38,8 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "Translate this text to French.",
   "language": "fr",
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "text": "Hello, how are you today?"
 }
 
@@ -48,6 +54,8 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "",
   "language": null,
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "text": "This is a test without custom instructions. It should use the default instruction."
 }
 
@@ -86,6 +94,8 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "Please summarize the main points of this YouTube video.",
   "language": "en",
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "source": "test",
   "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 }
@@ -101,9 +111,14 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "Please summarize the content from this webpage.",
   "language": "en",
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "source": "test",
   "url": "https://example.com/article"
 }
+
+
+###
 
 
 ###
@@ -116,6 +131,8 @@ X-Api-Key: {{ApiKey}}
 {
   "instructions": "",
   "language": null,
+  "model": "{{Model}}",
+  "provider": "{{Provider}}",
   "source": "test",
   "url": "https://example.com/content"
 }

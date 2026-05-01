@@ -22,17 +22,25 @@ public class ChatClientFactory : IChatClientFactory
     {
         return provider.ToLowerInvariant() switch
         {
-            "anthropic" => CreateAnthropic(model ?? "claude-sonnet-4-6"),
-            "openai"    => CreateOpenAI(model ?? "gpt-4o-mini"),
-            "gemini"    => CreateGemini(model ?? "gemini-2.0-flash"),
-            "openrouter" => CreateOpenRouter(model ?? throw new ArgumentException("Model must be specified for OpenRouter.", nameof(model))),
+            "anthropic" => CreateAnthropic(model),
+            "openai" => CreateOpenAI(model),
+            "gemini" => CreateGemini(model),
+            "openrouter" => CreateOpenRouter(model),
             _ => throw new ArgumentException($"Unknown provider '{provider}'.", nameof(provider))
         };
     }
 
-    private IChatClient CreateAnthropic(string model)
+    private IChatClient CreateAnthropic(string? model)
     {
-        var apiKey = _configuration["ChatClients:Anthropic:ApiKey"]
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            model = _configuration["ANTHROPIC_DEFAULT_MODEL"];
+        }
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("Anthropic model is not configured.");
+        }
+        var apiKey = _configuration["ANTHROPIC_API_KEY"]
             ?? throw new InvalidOperationException("Anthropic API key is not configured.");
         return new AnthropicClient(new APIAuthentication(apiKey)).Messages
             .AsBuilder()
@@ -40,16 +48,32 @@ public class ChatClientFactory : IChatClientFactory
             .Build();
     }
 
-    private IChatClient CreateOpenAI(string model)
+    private IChatClient CreateOpenAI(string? model)
     {
-        var apiKey = _configuration["ChatClients:OpenAI:ApiKey"]
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            model = _configuration["OPENAI_DEFAULT_MODEL"];
+        }
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("OpenAI model is not configured.");
+        }
+        var apiKey = _configuration["OPENAI_API_KEY"]
             ?? throw new InvalidOperationException("OpenAI API key is not configured.");
         return new ChatClient(model, new ApiKeyCredential(apiKey)).AsIChatClient();
     }
 
-    private IChatClient CreateGemini(string model)
+    private IChatClient CreateGemini(string? model)
     {
-        var apiKey = _configuration["ChatClients:Gemini:ApiKey"]
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            model = _configuration["GEMINI_DEFAULT_MODEL"];
+        }
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("Gemini model is not configured.");
+        }
+        var apiKey = _configuration["GEMINI_API_KEY"]
             ?? throw new InvalidOperationException("Gemini API key is not configured.");
         return new GeminiChatClient(new GeminiClientOptions { ApiKey = apiKey })
             .AsBuilder()
@@ -57,9 +81,17 @@ public class ChatClientFactory : IChatClientFactory
             .Build();
     }
 
-    private IChatClient CreateOpenRouter(string model)
+    private IChatClient CreateOpenRouter(string? model)
     {
-        var apiKey = _configuration["ChatClients:OpenRouter:ApiKey"]
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            model = _configuration["OPENROUTER_DEFAULT_MODEL"];
+        }
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            throw new InvalidOperationException("OpenRouter model is not configured.");
+        }
+        var apiKey = _configuration["OPENROUTER_API_KEY"]
             ?? throw new InvalidOperationException("OpenRouter API key is not configured.");
         var client = new OpenRouterChatClient(apiKey);
         client.UseModel(model);
