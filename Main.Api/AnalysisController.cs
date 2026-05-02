@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Main.Api.Models;
 using Infrastructure.ChatAgents;
@@ -31,13 +30,6 @@ namespace Main.Api
         public AnalysisController(IChatClientFactory chatClientFactory)
         {
             _chatClientFactory = chatClientFactory;
-        }
-
-        [HttpGet("status")]
-        [AllowAnonymous]
-        public IActionResult GetStatus()
-        {
-            return NoContent();
         }
 
         [HttpPost("text")]

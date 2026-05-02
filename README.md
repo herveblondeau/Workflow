@@ -141,23 +141,65 @@ Record audio from system sources. Cross-platform support for Windows and Linux.
 
 ## Configuration
 
-Set the OpenRouter API key in `appsettings.json` or via user secrets:
+Configuration is read from (in order of precedence): `.env` file, `appsettings.json` / `appsettings.{env}.json`, and .NET user secrets. The `DOTNET_ENVIRONMENT` environment variable controls which `appsettings.{env}.json` is loaded (`Development`, `Production`, etc.).
 
-```json
-{
-  "ChatClients": {
-    "OpenRouter": {
-      "ApiKey": "your-api-key-here"
-    }
-  }
-}
+### Variables
+
+| Variable | Description |
+| --- | --- |
+| `API_KEY` | Secret key clients must supply in the `X-Api-Key` request header. Required — the API will refuse to start if absent. |
+| `OPENAI_API_KEY` | OpenAI API key. |
+| `OPENAI_DEFAULT_MODEL` | Model used when the request does not specify one (e.g. `gpt-4o-mini`). |
+| `ANTHROPIC_API_KEY` | Anthropic API key. |
+| `ANTHROPIC_DEFAULT_MODEL` | Model used when the request does not specify one (e.g. `claude-sonnet-4-6`). |
+| `GEMINI_API_KEY` | Google Gemini API key. |
+| `GEMINI_DEFAULT_MODEL` | Model used when the request does not specify one (e.g. `gemini-2.5-flash`). |
+| `OPENROUTER_API_KEY` | OpenRouter API key. |
+| `OPENROUTER_DEFAULT_MODEL` | Model used when the request does not specify one. |
+
+Example `.env` file:
+
 ```
+API_KEY=your-secret-key
 
-The `DOTNET_ENVIRONMENT` environment variable controls which `appsettings.{env}.json` is loaded (`Development`, `Production`, etc.).
+OPENAI_API_KEY=sk-...
+OPENAI_DEFAULT_MODEL=gpt-4o-mini
+
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_DEFAULT_MODEL=claude-sonnet-4-6
+
+GEMINI_API_KEY=...
+GEMINI_DEFAULT_MODEL=gemini-2.5-flash
+
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_DEFAULT_MODEL=openrouter/owl-alpha
+```
 
 ## REST API (`Main.Api`)
 
-Base path: `/api/analysis`
+All endpoints except `GET /api/system/status` require an `X-Api-Key` header matching the configured `API_KEY`.
+
+### `GET /api/system/status`
+
+Health check. Returns `204 No Content`. No authentication required.
+
+### `GET /api/system/models`
+
+Returns the list of available models for each configured provider.
+
+```json
+[
+  {
+    "id": "anthropic",
+    "label": "anthropic",
+    "models": [
+      { "id": "claude-opus-4-5", "label": "claude-opus-4-5" }
+    ]
+  }
+]
+```
+
+Providers whose API key is missing or whose API call fails are omitted from the response.
 
 ### `POST /api/analysis/text`
 
@@ -165,6 +207,8 @@ Transforms raw text using AI.
 
 ```json
 {
+  "provider": "anthropic",
+  "model": "claude-sonnet-4-6",
   "text": "The text to process",
   "language": "en",
   "instructions": "Summarize in bullet points\nKeep it under 100 words"
@@ -175,10 +219,19 @@ Transforms raw text using AI.
 
 Runs OCR on an uploaded image, then applies AI transformation. Accepts `multipart/form-data`.
 
-| Field      | Type          | Description                                   |
-| ---------- | ------------- | --------------------------------------------- |
-| `image`    | file          | Image file                                    |
-| `metadata` | string (JSON) | `{ "language": "en", "instructions": "..." }` |
+| Field      | Type          | Description         |
+| ---------- | ------------- | ------------------- |
+| `image`    | file          | Image file          |
+| `metadata` | string (JSON) | See body below      |
+
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "language": "en",
+  "instructions": "Translate to English"
+}
+```
 
 ### `POST /api/analysis/url`
 
@@ -186,13 +239,17 @@ Fetches and analyzes content from a URL. Automatically switches to the YouTube p
 
 ```json
 {
+  "provider": "gemini",
+  "model": "gemini-2.5-flash",
   "text": "https://www.youtube.com/watch?v=...",
   "language": "en",
   "instructions": "Can you write a summary?"
 }
 ```
 
-All endpoints return:
+`provider` is required. `model` is optional — falls back to the configured default for that provider.
+
+All analysis endpoints return:
 
 ```json
 { "success": true, "result": "..." }

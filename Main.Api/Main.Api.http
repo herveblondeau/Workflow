@@ -8,8 +8,15 @@
 
 ###
 
-GET {{BaseUrl}}/api/analysis/status HTTP/1.1
+GET {{BaseUrl}}/api/system/status HTTP/1.1
 Accept: application/json
+
+
+###
+
+GET {{BaseUrl}}/api/system/models HTTP/1.1
+Accept: application/json
+X-Api-Key: {{ApiKey}}
 
 
 ###

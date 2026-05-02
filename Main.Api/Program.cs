@@ -7,6 +7,7 @@ Env.Load();
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddHttpClient();
 builder.Services.AddSingleton<Infrastructure.ChatAgents.IChatClientFactory, Infrastructure.ChatAgents.ChatClientFactory>();
 builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
