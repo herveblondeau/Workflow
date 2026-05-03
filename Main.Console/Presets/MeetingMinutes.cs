@@ -2,7 +2,7 @@ using Core;
 using Core.Models;
 using FluentResults;
 using Infrastructure.ChatAgents;
-using Infrastructure.ChatAgents.OpenRouter;
+using Infrastructure.ChatAgents.ChatClients;
 using Infrastructure.Recorders;
 using Infrastructure.TextTransformers;
 using Infrastructure.Transcribers;
@@ -58,15 +58,15 @@ public class MeetingMinutes
 
         if (Environment.OSVersion.Platform == PlatformID.Win32NT)
         {
-                multiSourceRecorder
-                    .AddSource(new WindowsMicrophoneRecorder(audioFormat))
-                    .AddSource(new WindowsAudioRecorder(audioFormat));
+            multiSourceRecorder
+                .AddSource(new WindowsMicrophoneRecorder(audioFormat))
+                .AddSource(new WindowsAudioRecorder(audioFormat));
         }
         else if (Environment.OSVersion.Platform == PlatformID.Unix)
         {
-                multiSourceRecorder
-                    .AddSource(new LinuxMicrophoneRecorder(audioFormat))
-                    .AddSource(new LinuxAudioRecorder(audioFormat));
+            multiSourceRecorder
+                .AddSource(new LinuxMicrophoneRecorder(audioFormat))
+                .AddSource(new LinuxAudioRecorder(audioFormat));
         }
         else
         {

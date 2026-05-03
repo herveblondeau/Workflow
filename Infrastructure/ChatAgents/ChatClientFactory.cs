@@ -1,11 +1,11 @@
 using Anthropic.SDK;
 using GeminiDotnet;
 using GeminiDotnet.Extensions.AI;
-using Infrastructure.ChatAgents.OpenRouter;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using OpenAI.Chat;
 using System.ClientModel;
+using Infrastructure.ChatAgents.ChatClients;
 
 namespace Infrastructure.ChatAgents;
 

@@ -3,7 +3,7 @@ using Core.Models;
 using Core.Tools.Workflow;
 using FluentResults;
 using Infrastructure.ChatAgents;
-using Infrastructure.ChatAgents.OpenRouter;
+using Infrastructure.ChatAgents.ChatClients;
 using Infrastructure.Downloaders;
 using Infrastructure.TextTransformers;
 using Infrastructure.Transcribers;
@@ -26,7 +26,7 @@ public class YouTubeSummary
     /// <summary>
     /// Summarizes the content
     /// </summary>
-    public Task<Result<string>> Summarize(string url, string sourceLanguage,  CancellationToken cancellationToken = default)
+    public Task<Result<string>> Summarize(string url, string sourceLanguage, CancellationToken cancellationToken = default)
     {
         return Summarize(url, sourceLanguage, "Can you write a summary?", cancellationToken);
     }

@@ -1,14 +1,19 @@
 using Main.Api;
 using DotNetEnv;
 using Microsoft.AspNetCore.Authentication;
+using Infrastructure.ChatAgents;
+using Infrastructure.ChatAgents.Providers;
 
 Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<Infrastructure.ChatAgents.IChatClientFactory, Infrastructure.ChatAgents.ChatClientFactory>();
+builder.Services.AddSingleton<IChatClientFactory, ChatClientFactory>();
+builder.Services.AddTransient<IProviderModelSource, AnthropicModelSource>();
+builder.Services.AddTransient<IProviderModelSource, OpenAIModelSource>();
+builder.Services.AddTransient<IProviderModelSource, GeminiModelSource>();
+builder.Services.AddTransient<IProviderModelSource, OpenRouterModelSource>();
 builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
 builder.Services.AddAuthorization();

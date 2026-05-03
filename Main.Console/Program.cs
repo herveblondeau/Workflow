@@ -13,7 +13,7 @@ using Core.Models;
 using FluentResults;
 using System.IO.Pipelines;
 using Core.Tools.Workflow;
-using Infrastructure.ChatAgents.OpenRouter;
+using Infrastructure.ChatAgents.ChatClients;
 using Infrastructure.ChatAgents;
 using Microsoft.Extensions.Configuration;
 using Main.Console;
@@ -201,8 +201,8 @@ return;
 // Console.WriteLine(output.Value);
 
 // var workflow = Workflow
-    // .Add(firstSuccessfulTool)
-    // .Add(parallelTool)
+// .Add(firstSuccessfulTool)
+// .Add(parallelTool)
 // ;
 // var result = await workflow.Execute(36);
 // if (result.IsFailed)
