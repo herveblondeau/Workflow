@@ -58,7 +58,8 @@ When adding a new capability, implement it as an `ITool<TIn, TOut>` in `Infrastr
 ### Infrastructure layout
 
 - `ChatAgents/` — `IChatAgent`/`ChatAgent` wraps `Microsoft.Extensions.AI` chat clients; `ChatClientFactory` builds a client per provider given a `ProviderModel`; `Providers/` holds one `IProviderModelSource` per AI provider (Anthropic, OpenAI, Gemini, OpenRouter) responsible for listing that provider's available models.
-- `Tools/Downloaders/` — YouTube audio/subtitles, generic URL content.
+- `Processes/` — `IProcessRunner`/`ProcessRunner` run an external executable as a child process (executable + argument list + optional stdin). Tools that shell out depend on this seam rather than starting their own process; it drains both pipes concurrently, escapes arguments, and honours cancellation/timeouts. The executable is named per call, not per instance, so a tool always chooses its own binary and an injected runner can't redirect it.
+- `Tools/Downloaders/` — YouTube audio/subtitles/transcript, generic URL content.
 - `Tools/Recorders/` — platform-specific audio capture (Windows/Linux, mic/system audio), plus `MultiSourceRecorder` to mix sources.
 - `Tools/Transcribers/` — Whisper.net (local speech-to-text) and Tesseract (OCR).
 - `Tools/TextTransformers/` — `AITextTransformer` sends text to a chat agent with instructions.
