@@ -25,7 +25,7 @@ public class LinuxMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecorder
     {
         try
         {
-            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
+            await Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -56,7 +56,7 @@ public class LinuxMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecorder
     }
 
 
-    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public Task Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         // State = ToolState.Starting;
 
@@ -74,6 +74,9 @@ public class LinuxMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecorder
         ALC.CaptureStart(_captureDevice);
 
         // State = ToolState.Running;
+
+        // OpenAL opens the device in-process, so there is nothing to wait for here
+        return Task.CompletedTask;
     }
 
     private ALFormat _getALFormat(int nbChannels, int bitsPerSample)

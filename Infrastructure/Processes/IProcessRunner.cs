@@ -28,4 +28,13 @@ public interface IProcessRunner
         IReadOnlyList<string> arguments,
         string? standardInput = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Starts a long-running process and hands back a handle to it, for output that has to be
+    /// consumed while the process runs rather than collected once it exits
+    /// The caller owns the lifetime, so no timeout applies — it ends the process through the handle
+    /// </summary>
+    /// <param name="executablePath">Named per call, for the same reason as in <see cref="Run"/></param>
+    /// <param name="arguments">One entry per argument, for the same reason as in <see cref="Run"/></param>
+    Result<IRunningProcess> Start(string executablePath, IReadOnlyList<string> arguments);
 }

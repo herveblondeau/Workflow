@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using Core;
 using FluentResults;
+using Infrastructure.Processes;
 
 namespace Infrastructure.Downloaders;
 
@@ -8,98 +8,87 @@ namespace Infrastructure.Downloaders;
 // Requires yt-dlp to be installed and accessible in PATH
 public class YouTubeSubtitlesDownloader : ITool<string, string>
 {
+    private const string _ytDlpExecutable = "yt-dlp";
+
+    private static readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(2);
+
+    private readonly IProcessRunner _processRunner;
     private readonly string _language;
 
-    public YouTubeSubtitlesDownloader(string language)
-    {
-        // State = ToolState.Idle;
+    public YouTubeSubtitlesDownloader(string language, TimeSpan? timeout = null)
+        : this(new ProcessRunner(timeout ?? _defaultTimeout), language) { }
 
+    public YouTubeSubtitlesDownloader(IProcessRunner processRunner, string language)
+    {
+        _processRunner = processRunner;
         _language = language;
     }
 
     public async Task<Result<string>> Transform(string videoUrl, CancellationToken cancellationToken = default)
     {
-        // State = ToolState.Running;
-
-        var result = await _downloadViaYtDlp(videoUrl, _language);
+        var result = await _downloadViaYtDlp(videoUrl, _language, cancellationToken);
         if (result.IsFailed)
         {
             return result;
         }
 
-        // State = ToolState.Idle;
         return _cleanSubtitlesContent(result.Value);
     }
 
-    private async Task<Result<string>> _downloadViaYtDlp(string videoUrl, string language)
+    private async Task<Result<string>> _downloadViaYtDlp(string videoUrl, string language, CancellationToken cancellationToken)
     {
-        // Create a temporary file for yt-dlp to write to
+        // yt-dlp appends the language and container to the output template it is given
         var tempFilePrefix = Path.GetTempFileName();
         var tempFile = $"{tempFilePrefix}.{language}.vtt";
 
-        // Build process info
-        var psi = new ProcessStartInfo
-        {
-            FileName = "yt-dlp",
-            Arguments = $"--skip-download --write-subs --sub-langs {language} -o \"{tempFilePrefix}\" {videoUrl}",
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
         try
         {
-            using var process = Process.Start(psi);
-            if (process == null)
+            var arguments = new List<string>
             {
-                return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp process failed to start");
+                "--skip-download",
+                "--write-subs",
+                "--sub-langs", language,
+                "-o", tempFilePrefix,
+                videoUrl
+            };
+
+            var run = await _processRunner.Run(_ytDlpExecutable, arguments, cancellationToken: cancellationToken);
+            if (run.IsFailed)
+            {
+                return run;
             }
 
-            await process.WaitForExitAsync();
-
-            if (process.ExitCode != 0)
-            {
-                var error = await process.StandardError.ReadToEndAsync();
-                return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp process exited with error ({error})");
-            }
-
+            // yt-dlp exits cleanly for a video that has no subtitles in this language
             if (!File.Exists(tempFile))
             {
                 return Result.Fail($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp subtitles file not generated");
             }
 
-            string content;
             try
             {
-                content = File.ReadAllText($"{tempFilePrefix}.{language}.vtt");
+                return Result.Ok(await File.ReadAllTextAsync(tempFile, cancellationToken));
             }
             catch (Exception ex)
             {
-                return Result.Fail(new Error($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp cannot read generated subtitles files ({tempFilePrefix}.{language}.vtt)").CausedBy(ex));
+                return Result.Fail(new Error($"{nameof(YouTubeSubtitlesDownloader)}: yt-dlp cannot read generated subtitles files ({tempFile})").CausedBy(ex));
             }
-
-            return Result.Ok(content);
         }
         finally
         {
-            try
-            {
-                if (File.Exists(tempFilePrefix))
-                {
-                    File.Delete(tempFilePrefix);
-                }
-            }
-            catch {}
+            _delete(tempFilePrefix);
+            _delete(tempFile);
+        }
+    }
 
-            try
-            {
-                if (File.Exists(tempFile))
-                {
-                    File.Delete(tempFile);
-                }
-            }
-            catch {}
+    private static void _delete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch
+        {
+            // Losing a temp file is not worth failing an otherwise successful download
         }
     }
 

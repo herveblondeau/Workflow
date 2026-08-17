@@ -1,7 +1,6 @@
 ﻿using Core;
 using Core.ChatAgents;
 using Whisper.net.Ggml;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Net;
 using System.Text.Json.Serialization;

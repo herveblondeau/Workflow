@@ -24,7 +24,7 @@ public class WindowsAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
     {
         try
         {
-            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
+            await Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -54,7 +54,7 @@ public class WindowsAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
         return new AudioStream(stream);
     }
 
-    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public Task Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         // State = ToolState.Starting;
 
@@ -68,6 +68,9 @@ public class WindowsAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
         _audioCapture.StartRecording();
 
         // State = ToolState.Running;
+
+        // NAudio opens the device in-process, so there is nothing to wait for here
+        return Task.CompletedTask;
     }
 
     private void _audioCapture_DataAvailable(object? sender, WaveInEventArgs e)

@@ -24,21 +24,7 @@ public class ProcessRunner : IProcessRunner
         string? standardInput = null,
         CancellationToken cancellationToken = default)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = executablePath,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        // ArgumentList escapes each entry, so arguments are never re-parsed as shell syntax
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
+        var startInfo = _createStartInfo(executablePath, arguments);
 
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutSource.CancelAfter(_timeout);
@@ -94,6 +80,46 @@ public class ProcessRunner : IProcessRunner
         {
             process?.Dispose();
         }
+    }
+
+    public Result<IRunningProcess> Start(string executablePath, IReadOnlyList<string> arguments)
+    {
+        try
+        {
+            var process = Process.Start(_createStartInfo(executablePath, arguments));
+            if (process == null)
+            {
+                return Result.Fail($"{nameof(ProcessRunner)}: {executablePath} process failed to start");
+            }
+
+            return Result.Ok<IRunningProcess>(new RunningProcess(process, executablePath));
+        }
+        catch (Exception ex)
+        {
+            return Result.Fail(new Error($"{nameof(ProcessRunner)}: {executablePath} failed to run").CausedBy(ex));
+        }
+    }
+
+    // Shared so the two paths cannot drift apart on escaping or on window/shell handling
+    private static ProcessStartInfo _createStartInfo(string executablePath, IReadOnlyList<string> arguments)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executablePath,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        // ArgumentList escapes each entry, so arguments are never re-parsed as shell syntax
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        return startInfo;
     }
 
     private static async Task _writeStandardInput(Process process, string? standardInput, CancellationToken cancellationToken)

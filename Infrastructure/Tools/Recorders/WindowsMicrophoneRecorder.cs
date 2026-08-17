@@ -24,7 +24,7 @@ public class WindowsMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecord
     {
         try
         {
-            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
+            await Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -55,7 +55,7 @@ public class WindowsMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecord
     }
 
 
-    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public Task Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         // State = ToolState.Starting;
 
@@ -70,6 +70,9 @@ public class WindowsMicrophoneRecorder : ITool<Unit, AudioStream>, IStreamRecord
         _micCapture.StartRecording();
 
         // State = ToolState.Running;
+
+        // NAudio opens the device in-process, so there is nothing to wait for here
+        return Task.CompletedTask;
     }
 
     private void _micCapture_DataAvailable(object? sender, WaveInEventArgs e)

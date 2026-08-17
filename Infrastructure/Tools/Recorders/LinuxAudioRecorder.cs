@@ -1,29 +1,38 @@
-using System.Diagnostics;
 using Core;
 using Core.Models;
 using Core.Recorders;
 using FluentResults;
-using NAudio.CoreAudioApi;
+using Infrastructure.Processes;
 
 namespace Infrastructure.Recorders;
 
 // IMPORTANT: This recorder captures system audio on Linux using FFmpeg and PulseAudio. Both tools must therefore be installed.
 // - ffmpeg is most likely already installed and if not, is easily installable via package managers (e.g., apt, yum, pacman).
 // - PulseAudio is the default sound server on many Linux distributions. If not installed, it can also be installed via package managers, in which case pulseaudio-utils is probably also necessary in order to run the 'pactl' command.
-// - bash is also required
 public class LinuxAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 {
-    private CancellationTokenSource _cts = null!;
-    private Task _readTask = null!;
-    private Process _ffmpeg = null!;
-    private MemoryStream _audioStream = null!;
-    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+    private const string _ffmpegExecutable = "ffmpeg";
+    private const string _pulseAudioControlExecutable = "pactl";
+
+    private static readonly TimeSpan _defaultSinkLookupTimeout = TimeSpan.FromSeconds(10);
+
+    private readonly IProcessRunner _processRunner;
     private readonly AudioFormat _audioFormat;
 
-    public LinuxAudioRecorder(AudioFormat audioFormat)
-    {
-        // State = ToolState.Idle;
+    private IRunningProcess? _ffmpeg;
+    private Task? _captureTask;
+    private MemoryStream _audioStream = null!;
 
+    public Func<CancellationToken, Task>? WaitForStopSignal { get; set; }
+
+    // The timeout covers the sink lookup only: the capture itself runs for as long as
+    // the recording does, and is ended through the process handle rather than timed out
+    public LinuxAudioRecorder(AudioFormat audioFormat, TimeSpan? sinkLookupTimeout = null)
+        : this(new ProcessRunner(sinkLookupTimeout ?? _defaultSinkLookupTimeout), audioFormat) { }
+
+    public LinuxAudioRecorder(IProcessRunner processRunner, AudioFormat audioFormat)
+    {
+        _processRunner = processRunner;
         _audioFormat = audioFormat;
     }
 
@@ -31,7 +40,7 @@ public class LinuxAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
     {
         try
         {
-            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
+            await Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -61,93 +70,65 @@ public class LinuxAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
         return new AudioStream(stream);
     }
 
-   public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public async Task Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
-        // State = ToolState.Starting;
-
         _audioStream = new MemoryStream();
 
-        // Get the default sink
-        string defaultSink;
-        defaultSink = _runCommand("pactl", "info | grep 'Default Sink:' | awk '{print $3}'").Trim();
-        if (string.IsNullOrEmpty(defaultSink))
+        var monitorSource = $"{await _getDefaultSink()}.monitor";
+
+        // Raw PCM on stdout, which the capture loop below reads for as long as the recording lasts
+        var arguments = new List<string>
         {
-            throw new Exception("Failed to get default sink from PulseAudio. Ensure PulseAudio is installed and running."); // TODO: consider using a custom exception
-        }
-        string monitorSource = defaultSink + ".monitor";
-
-        // Build FFmpeg arguments to output raw PCM to stdout
-        _ffmpeg = new Process();
-        _ffmpeg.StartInfo.FileName = "ffmpeg";
-        _ffmpeg.StartInfo.Arguments = $"-f pulse -i {monitorSource} -ar {sampleRate} -ac {nbChannels} -sample_fmt s{bitsPerSample} -f wav -";
-        _ffmpeg.StartInfo.UseShellExecute = false;
-        _ffmpeg.StartInfo.RedirectStandardOutput = true; // redirect stdout to read stream
-        _ffmpeg.StartInfo.RedirectStandardError = true;  // redirect stderr to console
-        _ffmpeg.StartInfo.CreateNoWindow = true;
-        _ffmpeg.EnableRaisingEvents = true;
-
-        // Read stdout in real-time into a MemoryStream
-        _cts = new CancellationTokenSource();
-
-        _ffmpeg.Start();
-
-        _readTask = Task.Run(async () =>
-        {
-            byte[] buffer = new byte[4096];
-            try
-            {
-                int bytesRead;
-                while (!_cts.Token.IsCancellationRequested &&
-                    (bytesRead = await _ffmpeg.StandardOutput.BaseStream.ReadAsync(buffer, 0, buffer.Length, _cts.Token)) > 0)
-                {
-                    _audioStream.Write(buffer, 0, bytesRead);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Expected when user stops recording; exit gracefully
-            }
-            // catch (InvalidOperationException)
-            // {
-            //     // Expected when user stops recording; exit gracefully
-            // }
-        }, _cts.Token);
-
-        // State = ToolState.Running;
-    }
-
-    private static string _runCommand(string command, string arguments)
-    {
-        var processStartInfo = new ProcessStartInfo
-        {
-            FileName = "/bin/bash",
-            Arguments = $"-c \"{command} {arguments}\"",
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
+            "-f", "pulse",
+            "-i", monitorSource,
+            "-ar", $"{sampleRate}",
+            "-ac", $"{nbChannels}",
+            "-sample_fmt", $"s{bitsPerSample}",
+            "-f", "wav",
+            "-"
         };
 
-        using (Process process = Process.Start(processStartInfo)!)
+        var started = _processRunner.Start(_ffmpegExecutable, arguments);
+        if (started.IsFailed)
         {
-            return process.StandardOutput.ReadToEnd();
+            throw new InvalidOperationException($"{nameof(LinuxAudioRecorder)}: cannot start ffmpeg ({_describe(started.Errors)})");
         }
+
+        _ffmpeg = started.Value;
+        _captureTask = _capture(_ffmpeg.StandardOutput);
     }
 
     public async Task Stop()
     {
-        // State = ToolState.Stopping;
-
-        // Stop reading and kill FFmpeg
-        _cts.Cancel();
-        _ffmpeg.Kill();
-        while (!_ffmpeg.HasExited)
+        if (_ffmpeg is null)
         {
-            await Task.Delay(100);
+            return;
         }
 
-        await _readTask;
+        var ffmpeg = _ffmpeg;
+        _ffmpeg = null;
 
-        // State = ToolState.Idle;
+        try
+        {
+            // Ending ffmpeg closes the pipe, which lets the capture loop drain what is still
+            // buffered and finish on its own. Cancelling the read instead would cut it short
+            var stopped = await ffmpeg.Stop();
+
+            if (_captureTask is not null)
+            {
+                await _captureTask;
+            }
+
+            // ffmpeg giving up mid-recording would otherwise surface as silently truncated audio
+            if (stopped.IsFailed)
+            {
+                throw new InvalidOperationException($"{nameof(LinuxAudioRecorder)}: ffmpeg failed during capture ({_describe(stopped.Errors)})");
+            }
+        }
+        finally
+        {
+            await ffmpeg.DisposeAsync();
+        }
     }
 
     public Stream? GetRecordedStream()
@@ -157,17 +138,52 @@ public class LinuxAudioRecorder : ITool<Unit, AudioStream>, IStreamRecorder
             return null;
         }
 
-        // if (State != ToolState.Idle)
-        // {
-        //     return null;
-        // }
-
         _audioStream.Position = 0;
         return _audioStream;
     }
 
     public void Dispose()
     {
+        // Disposing the handle kills the process before it yields, so the child is gone by
+        // the time this returns even though reaping it finishes on its own afterwards.
+        // AsTask so abandoning the result stays safe whatever backs the ValueTask
+        _ = _ffmpeg?.DisposeAsync().AsTask();
+        _ffmpeg = null;
+
         _audioStream?.Dispose();
     }
+
+    private async Task<string> _getDefaultSink()
+    {
+        // get-default-sink prints the sink name on its own, so there is nothing to parse out
+        // of a field label that PulseAudio would translate to the host's locale
+        var result = await _processRunner.Run(_pulseAudioControlExecutable, ["get-default-sink"]);
+        if (result.IsFailed)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(LinuxAudioRecorder)}: cannot read the default PulseAudio sink ({_describe(result.Errors)}). Ensure PulseAudio is installed and running.");
+        }
+
+        var defaultSink = result.Value.Trim();
+        if (string.IsNullOrEmpty(defaultSink))
+        {
+            throw new InvalidOperationException(
+                $"{nameof(LinuxAudioRecorder)}: PulseAudio reports no default sink. Ensure PulseAudio is installed and running.");
+        }
+
+        return defaultSink;
+    }
+
+    private async Task _capture(Stream output)
+    {
+        var buffer = new byte[4096];
+
+        int bytesRead;
+        while ((bytesRead = await output.ReadAsync(buffer)) > 0)
+        {
+            await _audioStream.WriteAsync(buffer.AsMemory(0, bytesRead));
+        }
+    }
+
+    private static string _describe(IEnumerable<IError> errors) => string.Join("; ", errors.Select(error => error.Message));
 }

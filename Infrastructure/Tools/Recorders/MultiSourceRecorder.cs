@@ -38,7 +38,7 @@ public class MultiSourceRecorder : ITool<Unit, AudioStream>, IStreamRecorder
     {
         try
         {
-            Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
+            await Start(_audioFormat.SampleRate, _audioFormat.NbChannels, _audioFormat.BitsPerSample);
         }
         catch (Exception ex)
         {
@@ -68,7 +68,7 @@ public class MultiSourceRecorder : ITool<Unit, AudioStream>, IStreamRecorder
         return new AudioStream(stream);
     }
 
-    public void Start(int sampleRate, int nbChannels, int bitsPerSample)
+    public async Task Start(int sampleRate, int nbChannels, int bitsPerSample)
     {
         // State = ToolState.Starting;
 
@@ -77,7 +77,7 @@ public class MultiSourceRecorder : ITool<Unit, AudioStream>, IStreamRecorder
 
         foreach (var source in _sources)
         {
-            source.Start(sampleRate, nbChannels, bitsPerSample);
+            await source.Start(sampleRate, nbChannels, bitsPerSample);
         }
 
         _mixedStream = new MemoryStream();
