@@ -77,3 +77,17 @@ Platform-specific recorders mean some tools only work on Windows or Linux — ch
 ### Main.Console
 
 `Presets/` contains full end-to-end workflows assembled from `Infrastructure` tools (e.g. `YouTubeSummary`, `MeetingMinutes`). Use these as the reference pattern when wiring a new preset — construct the tools, chain them via `Workflow`/composition tools, and expose a single async entry method.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in the `herveblondeau/Workflow` GitHub Issues, driven via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
