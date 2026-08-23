@@ -1,14 +1,24 @@
-using Main.Api;
 using DotNetEnv;
-using Microsoft.AspNetCore.Authentication;
 using Infrastructure.ChatAgents;
 using Infrastructure.ChatAgents.Providers;
+using Infrastructure.Filigrane;
+using Main.Api;
+using Main.Api.Filigrane.Services;
+using Microsoft.AspNetCore.Authentication;
 
 Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+
+// --- Filigrane (watermarking) ---
+builder.Services.AddSingleton<ITokenStore, InMemoryTokenStore>();
+builder.Services.AddSingleton<IFileStore, LocalFileStore>();
+builder.Services.AddSingleton<PdfWatermarker>();
+builder.Services.AddHostedService<CleanupService>();
+
+// --- Existing services ---
 builder.Services.AddSingleton<IChatClientFactory, ChatClientFactory>();
 builder.Services.AddTransient<IProviderModelSource, AnthropicModelSource>();
 builder.Services.AddTransient<IProviderModelSource, OpenAIModelSource>();
