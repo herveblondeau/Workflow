@@ -26,22 +26,23 @@ None yet
 
 ## Stones laid
 
-### 1. Port PDF watermarking API into Workflow - issue `#4`
+### 1. PDF watermarking moved into Workflow (tool-based, token download) - `5b9910b` (issue `#4`, PR `#5`)
 
-- **Added:** `POST /api/watermark` + `GET /api/download/{token}` in `Workflow/Main.Api` (PDF-only), requiring `X-Api-Key`
-- **Revealed:** keeping the existing token-based flow works fine in Workflow; frontend can stay unchanged once a BFF/proxy injects the API key
+- **Added:**
+  - API (requires `X-Api-Key`)
+    - `POST /api/watermark` (multipart/form-data, PDF-only)
+    - `GET /api/download/{token}` (single use, expiry)
+  - Tool-based implementation following Workflow conventions
+    - `Core/Models/PdfStream.cs` (typed stream wrapper)
+    - `Core/Models/WatermarkOptions.cs` (shared options contract)
+    - `Infrastructure/Tools/Watermarking/PdfWatermarkTool.cs` implementing `ITool<PdfStream, PdfStream>`
+  - Token + disk storage + cleanup background service under `Main.Api/Filigrane/Services/`
+- **Revealed:** the HTTP contract can stay compatible with filigrane's existing frontend, but the browser will need a BFF/proxy to inject `X-Api-Key`
 - **Demo:**
   - Run API: `cd /home/tigrou/Dev/Workflow/Main.Api && API_KEY=devkey dotnet run --launch-profile https`
   - Upload: `curl -k -H "X-Api-Key: devkey" -F "file=@/path/to/input.pdf" -F "watermarkType=Invisible" -F "contentType=Custom" -F "customText=HELLO" https://localhost:7156/api/watermark`
   - Download: `curl -k -H "X-Api-Key: devkey" -L -o out.pdf https://localhost:7156/api/download/<token>`
-- **Test:** `Tests/Infrastructure/PdfWatermarkerTests.cs`
-
-### 1b. Rework watermarking as an `ITool` (post-review correction)
-
-- **Added:** `Core/Models/PdfStream.cs` (thin `Stream` wrapper, mirrors `ImageStream`/`AudioStream`), `Infrastructure/Tools/Watermarking/PdfWatermarkTool.cs` implementing `ITool<PdfStream, PdfStream>`, `Core/Models/WatermarkOptions.cs`. Removed the old `Infrastructure/Filigrane/PdfWatermarker.cs` service class; controller now builds a `PdfStream` and calls the tool, translating `Result<PdfStream>` to HTTP
-- **Revealed:** review caught that stone 1 ported filigrane's service-class shape instead of adopting the repo's existing tool convention; the codebase already has a clear pattern (`ITool<TIn, TOut>`, `Result<T>`, constructor-injected options, dedicated stream types) that watermarking should have followed from the start
-- **Demo:** same as stone 1 (unchanged HTTP contract)
-- **Test:** `Tests/Infrastructure/PdfWatermarkToolTests.cs` (replaces `PdfWatermarkerTests.cs`), tests the tool directly at the `Transform` seam
+- **Test:** `Tests/Infrastructure/PdfWatermarkToolTests.cs`
 
 ## Next candidates
 
