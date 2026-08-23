@@ -1,25 +1,49 @@
-using Infrastructure.Filigrane.Models;
+using Core;
+using Core.Models;
+using FluentResults;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
+using PdfStream = Core.Models.PdfStream;
 
-namespace Infrastructure.Filigrane;
+namespace Infrastructure.Watermarking;
 
-public class PdfWatermarker
+public class PdfWatermarkTool : ITool<PdfStream, PdfStream>
 {
-    public void Watermark(Stream input, Stream output, WatermarkOptions options)
+    private readonly WatermarkOptions _options;
+
+    public PdfWatermarkTool(WatermarkOptions options)
     {
-        var watermarkText = options.ContentType == WatermarkContentType.Timestamp
+        _options = options;
+    }
+
+    public async Task<Result<PdfStream>> Transform(PdfStream input, CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+
+        var watermarkText = _options.ContentType == WatermarkContentType.Timestamp
             ? $"Generated: {DateTimeOffset.UtcNow:yyyy-MM-dd HH:mm:ss} UTC"
-            : options.CustomText ?? string.Empty;
+            : _options.CustomText ?? string.Empty;
 
-        using var reader = new PdfReader(input);
-        using var stamper = new PdfStamper(reader, output);
+        var output = new MemoryStream();
+        try
+        {
+            using var reader = new PdfReader(input);
+            using var stamper = new PdfStamper(reader, output);
 
-        if (options.Type is WatermarkType.Invisible or WatermarkType.Both)
-            AddInvisibleWatermark(stamper, watermarkText);
+            if (_options.Type is WatermarkType.Invisible or WatermarkType.Both)
+                AddInvisibleWatermark(stamper, watermarkText);
 
-        if (options.Type is WatermarkType.Visible or WatermarkType.Both)
-            AddVisibleWatermark(reader, stamper, watermarkText, options);
+            if (_options.Type is WatermarkType.Visible or WatermarkType.Both)
+                AddVisibleWatermark(reader, stamper, watermarkText, _options);
+        }
+        catch (Exception ex)
+        {
+            output.Dispose();
+            return Result.Fail(new Error($"{nameof(PdfWatermarkTool)}: failed to watermark PDF").CausedBy(ex));
+        }
+
+        output.Position = 0;
+        return Result.Ok(new PdfStream(output));
     }
 
     private static void AddInvisibleWatermark(PdfStamper stamper, string text)

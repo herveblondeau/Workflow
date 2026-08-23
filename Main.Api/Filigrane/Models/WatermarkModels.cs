@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using Infrastructure.Filigrane.Models;
+using Core.Models;
 
 namespace Main.Api.Filigrane.Models;
 

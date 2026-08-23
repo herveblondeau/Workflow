@@ -1,5 +1,5 @@
-using Infrastructure.Filigrane;
-using Infrastructure.Filigrane.Models;
+using Core.Models;
+using Infrastructure.Watermarking;
 using Main.Api.Filigrane.Models;
 using Main.Api.Filigrane.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +9,6 @@ namespace Main.Api.Filigrane.Controllers;
 [ApiController]
 [Route("api")]
 public class WatermarkController(
-    PdfWatermarker watermarker,
     ITokenStore tokenStore,
     IFileStore fileStore,
     IConfiguration configuration,
@@ -49,15 +48,23 @@ public class WatermarkController(
             Color = request.Color
         };
 
+        var watermarkResult = await new PdfWatermarkTool(options).Transform(new PdfStream(input));
+        if (watermarkResult.IsFailed)
+        {
+            logger.LogError("Watermarking failed for file {Name}: {Errors}",
+                request.File.FileName, string.Join("; ", watermarkResult.Errors.Select(e => e.Message)));
+            return StatusCode(500, new { error = "Failed to process the PDF.", code = "PROCESSING_FAILED" });
+        }
+
         var outputPath = fileStore.GetNewFilePath(".pdf");
         try
         {
             await using var fileStream = System.IO.File.Create(outputPath);
-            watermarker.Watermark(input, fileStream, options);
+            await watermarkResult.Value.CopyToAsync(fileStream);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Watermarking failed for file {Name}", request.File.FileName);
+            logger.LogError(ex, "Failed to persist watermarked PDF for file {Name}", request.File.FileName);
             fileStore.Delete(outputPath);
             return StatusCode(500, new { error = "Failed to process the PDF.", code = "PROCESSING_FAILED" });
         }

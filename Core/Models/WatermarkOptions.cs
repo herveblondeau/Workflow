@@ -1,4 +1,4 @@
-namespace Infrastructure.Filigrane.Models;
+namespace Core.Models;
 
 public enum WatermarkType { Visible, Invisible, Both }
 public enum WatermarkContentType { Timestamp, Custom }

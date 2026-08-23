@@ -1,7 +1,6 @@
 using DotNetEnv;
 using Infrastructure.ChatAgents;
 using Infrastructure.ChatAgents.Providers;
-using Infrastructure.Filigrane;
 using Main.Api;
 using Main.Api.Filigrane.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -15,7 +14,6 @@ builder.Services.AddOpenApi();
 // --- Filigrane (watermarking) ---
 builder.Services.AddSingleton<ITokenStore, InMemoryTokenStore>();
 builder.Services.AddSingleton<IFileStore, LocalFileStore>();
-builder.Services.AddSingleton<PdfWatermarker>();
 builder.Services.AddHostedService<CleanupService>();
 
 // --- Existing services ---
