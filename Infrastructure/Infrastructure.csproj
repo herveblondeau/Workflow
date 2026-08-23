@@ -22,6 +22,7 @@
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="9.4.4-preview.1.25259.16" />
     <PackageReference Include="Anthropic.SDK" Version="5.5.0" />
     <PackageReference Include="GeminiDotnet.Extensions.AI" Version="0.14.1" />
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="3.7.12" />
   </ItemGroup>
 
 </Project>

@@ -3,6 +3,9 @@ using DotNetEnv;
 using Microsoft.AspNetCore.Authentication;
 using Infrastructure.ChatAgents;
 using Infrastructure.ChatAgents.Providers;
+using Infrastructure.Tools.Watermarking;
+using Main.Api.Watermarking;
+using Main.Api.Watermarking.Storage;
 
 Env.Load();
 
@@ -17,6 +20,15 @@ builder.Services.AddTransient<IProviderModelSource, OpenRouterModelSource>();
 builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
 builder.Services.AddAuthorization();
+
+// Filigrane-compatible watermark endpoints (stone 1)
+builder.Services.AddSingleton<ITokenStore, InMemoryTokenStore>();
+builder.Services.AddSingleton<IFileStore, LocalFileStore>();
+builder.Services.AddSingleton<PdfWatermarker>();
+builder.Services.AddHostedService<CleanupService>();
+builder.Services.AddSingleton<DiskWatermarkPipeline>();
+builder.Services.AddSingleton<StreamingWatermarkPipeline>();
+builder.Services.AddSingleton<IWatermarkPipeline, RoutingWatermarkPipeline>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
