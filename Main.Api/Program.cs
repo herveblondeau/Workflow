@@ -4,6 +4,7 @@ using Infrastructure.ChatAgents.Providers;
 using Main.Api;
 using Main.Api.Filigrane.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.HttpOverrides;
 
 Env.Load();
 
@@ -24,6 +25,16 @@ builder.Services.AddTransient<IProviderModelSource, GeminiModelSource>();
 builder.Services.AddTransient<IProviderModelSource, OpenRouterModelSource>();
 builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
+
+// Behind a reverse proxy (Caddy in prod) that terminates TLS and forwards
+// plain HTTP on the container network, so trust its X-Forwarded-* headers
+// rather than relying on a fixed known proxy IP.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 builder.Services.AddAuthorization();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -41,6 +52,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

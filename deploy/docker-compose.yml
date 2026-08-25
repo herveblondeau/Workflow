@@ -1,0 +1,49 @@
+services:
+  workflow-api:
+    build:
+      context: ..
+      dockerfile: Main.Api/Dockerfile
+    image: workflow-api
+    container_name: workflow-api
+    expose:
+      - "8080"
+    volumes:
+      - workflow-storage:/app/storage
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      API_KEY: ${API_KEY}
+      Filigrane__StoragePath: /app/storage
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_DEFAULT_MODEL: ${OPENAI_DEFAULT_MODEL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_DEFAULT_MODEL: ${ANTHROPIC_DEFAULT_MODEL:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_DEFAULT_MODEL: ${GEMINI_DEFAULT_MODEL:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:-}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: workflow-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      DOMAIN: ${DOMAIN}
+    depends_on:
+      - workflow-api
+    restart: unless-stopped
+
+volumes:
+  workflow-storage:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
