@@ -26,9 +26,9 @@ builder.Services.AddTransient<IProviderModelSource, OpenRouterModelSource>();
 builder.Services.AddAuthentication(ApiKeyAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null);
 
-// Behind a reverse proxy (Caddy in prod) that terminates TLS and forwards
-// plain HTTP on the container network, so trust its X-Forwarded-* headers
-// rather than relying on a fixed known proxy IP.
+// In prod, sits behind whatever reverse proxy the operator hosting this API
+// runs (nginx, Caddy, etc.), which terminates TLS and forwards plain HTTP.
+// Trust its X-Forwarded-* headers rather than relying on a fixed known proxy IP.
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;

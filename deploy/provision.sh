@@ -187,21 +187,13 @@ REPO_URL="https://github.com/herveblondeau/Workflow.git"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
 
-TOTAL_STAGES=5
+TOTAL_STAGES=4
 
-banner "Main.Api: deploy to a VPS behind Caddy"
+banner "Main.Api: deploy to a VPS"
+say "This only deploys workflow-api, bound to 127.0.0.1:8080 on the VPS."
+say "Fronting it with a reverse proxy (nginx, Caddy, whatever you already run) and TLS is on you."
 
-# ── Stage 1: VPS & DNS ─────────────────────────────────────────────────────
-stage "VPS & DNS"
-say "Caddy needs a domain pointing at the VPS to get a Let's Encrypt cert."
-ask VPS_IP "Public IP address of the VPS:"
-ask DOMAIN "Domain/subdomain to use for Main.Api (e.g. api.example.com):"
-step "At your DNS provider, create an A record: $DOMAIN -> $VPS_IP"
-note "DNS can take a few minutes to propagate; the verify stage will catch it if it hasn't yet."
-pause "Done creating the A record?"
-write_env DOMAIN "$DOMAIN"
-
-# ── Stage 2: SSH access ─────────────────────────────────────────────────────
+# ── Stage 1: SSH access ─────────────────────────────────────────────────────
 stage "SSH access"
 say "This stage clones/updates the repo on the VPS and starts the containers over SSH."
 ask VPS_SSH "SSH target for the VPS (user@host):"
@@ -214,7 +206,7 @@ else
 fi
 write_env VPS_SSH "$VPS_SSH"
 
-# ── Stage 3: Secrets ─────────────────────────────────────────────────────
+# ── Stage 2: Secrets ─────────────────────────────────────────────────────
 stage "Secrets"
 say "API_KEY is required: it's what filigrane (and any future client) sends as X-Api-Key."
 current_key=$(_existing API_KEY || true)
@@ -238,7 +230,7 @@ for pair in "OPENAI_API_KEY:OPENAI_DEFAULT_MODEL" "ANTHROPIC_API_KEY:ANTHROPIC_D
   fi
 done
 
-# ── Stage 4: Deploy ─────────────────────────────────────────────────────
+# ── Stage 3: Deploy ─────────────────────────────────────────────────────
 stage "Deploy"
 say "This clones/pulls the repo on the VPS and runs docker compose up -d --build."
 if ! confirm "Ready to deploy to $VPS_SSH?"; then
@@ -259,23 +251,24 @@ else
   printf '  %s✓ deployed%s\n' "$GREEN" "$RESET"
 fi
 
-# ── Stage 5: Verify ─────────────────────────────────────────────────────
+# ── Stage 4: Verify ─────────────────────────────────────────────────────
 stage "Verify"
-say "Checking that Main.Api is reachable over HTTPS (Caddy's first cert issuance can take up to a minute)."
+say "Checking that Main.Api is reachable on the VPS's loopback interface."
 status=""
 for _ in $(seq 1 12); do
-  status=$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/system/status" || true)
+  status=$(ssh "$VPS_SSH" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/system/status" 2>/dev/null || true)
   [[ "$status" == "204" ]] && break
   sleep 5
 done
 if [[ "$status" == "204" ]]; then
-  printf '  %s✓ https://%s/api/system/status -> 204%s\n' "$GREEN" "$DOMAIN" "$RESET"
+  printf '  %s✓ 127.0.0.1:8080/api/system/status -> 204 (on %s)%s\n' "$GREEN" "$VPS_SSH" "$RESET"
 else
-  warn "got HTTP $status from https://$DOMAIN/api/system/status"
-  note "check DNS propagation and: ssh $VPS_SSH 'cd workflow/deploy && docker compose logs'"
+  warn "got HTTP $status from 127.0.0.1:8080/api/system/status on $VPS_SSH"
+  note "check: ssh $VPS_SSH 'cd workflow/deploy && docker compose logs'"
 fi
 
 finish
 note "deploy/.env on this machine now holds everything needed to re-run this wizard idempotently."
 note "repo used on the VPS: $REPO_URL"
+note "not done yet: point your reverse proxy at 127.0.0.1:8080 on the VPS and terminate TLS there."
 unset SCRIPT_DIR

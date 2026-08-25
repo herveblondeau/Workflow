@@ -5,8 +5,11 @@ services:
       dockerfile: Main.Api/Dockerfile
     image: workflow-api
     container_name: workflow-api
-    expose:
-      - "8080"
+    # Bound to loopback only: the operator's own reverse proxy (nginx, Caddy,
+    # whatever) runs on the host and proxies to this port. TLS termination
+    # and public routing are that reverse proxy's job, not this compose file's.
+    ports:
+      - "127.0.0.1:8080:8080"
     volumes:
       - workflow-storage:/app/storage
     environment:
@@ -24,26 +27,6 @@ services:
       OPENROUTER_DEFAULT_MODEL: ${OPENROUTER_DEFAULT_MODEL:-}
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    container_name: workflow-caddy
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    environment:
-      DOMAIN: ${DOMAIN}
-    depends_on:
-      - workflow-api
-    restart: unless-stopped
-
 volumes:
   workflow-storage:
-    driver: local
-  caddy-data:
-    driver: local
-  caddy-config:
     driver: local
