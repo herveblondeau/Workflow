@@ -105,7 +105,8 @@ None yet
   - `WORKFLOW_API_KEY=<key> WORKFLOW_API_URL=http://host.docker.internal:8080 docker compose up` (filigrane)
   - Open `http://localhost`, upload a PDF, watermark round-trips through nginx; DevTools shows no `X-Api-Key` on the browser request
 - **Test:** `test/nginx/render.test.sh` (passes locally); `test/nginx/proxy.test.sh` (skips without a Docker daemon - run on a Docker host)
-- **Note:** `.env.example` is gitignored (`.env*`), so env vars are documented in `docker-compose.yml` + `test/nginx/README.md` rather than a tracked file (same finding as stone 2). Scope is local production-style only
+- **Note:** env vars are documented in `docker-compose.yml` + `test/nginx/README.md`; a follow-up commit (`cef1b41`) also negates the `.env*` ignore for `.env.example` so it's tracked, closing the recurring stone-2 gap. Scope is local production-style only
+- **Follow-up finding:** Main.Api's watermark action already has `[RequestSizeLimit(4_194_304)]` (4 MB), matching nginx's `client_max_body_size 4M` - so app-level + proxy size guards already agree; no change needed. Open (minor): the old backend's cap was 3 MB, so the canonical max is now 4 MB, not 3 MB
 
 ## Next candidates
 
