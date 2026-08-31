@@ -89,15 +89,34 @@ None yet
   - Point any reverse proxy at that port and terminate TLS there; verified against the real VPS (a previously-provisioned Caddy container had in fact never started, since host nginx already held 80/443 - cleaned up manually, outside this PR)
 - **Test:** no new application logic to pin; `dotnet build` and `docker compose config` verified clean
 
+### 5. Wire filigrane's prod nginx to Main.Api, inject X-Api-Key server-side (filigrane PR `#6`)
+
+- **Added (filigrane repo):**
+  - `frontend/nginx.conf` -> `nginx.conf.template`: `/api/*` upstream now `${WORKFLOW_API_URL}` (was the deleted `api:8080`); each `/api` location injects `proxy_set_header X-Api-Key "${WORKFLOW_API_KEY}"`. Existing rate-limit zones kept as-is
+  - `frontend/Dockerfile`: template copied to `/etc/nginx/templates/`, `NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx` so the image entrypoint renders it at start (substitutes only the two defined env vars, leaves nginx's own `$vars`)
+  - `docker-compose.yml`: passes `WORKFLOW_API_URL`/`WORKFLOW_API_KEY`, `host.docker.internal:host-gateway` for Linux, fails fast if the key is unset
+  - `test/nginx/`: `render.test.sh` (envsubst render, runs anywhere) + `proxy.test.sh` (real nginx + stub upstream; Docker, skips otherwise) + README
+- **Revealed:**
+  - The prod nginx is the prod analog of the vite dev proxy; `X-Api-Key` injection is orthogonal to public exposure. nginx bound to loopback/private is a legitimate non-public setup - "nginx" never meant "public"
+  - Wiring nginx also gets "rate limiting parity" for free (the zones were already in `nginx.conf`)
+  - The single shared `API_KEY` authenticates "this is filigrane", not a user. A network-reachable frontend still needs a "which humans" gate (edge gating or per-user auth); a purely local frontend needs neither. Per-user keys (LLM-style) would mean each user presents their own key = building auth
+- **Demo:**
+  - `cd Workflow/deploy && docker compose up` (Main.Api on `127.0.0.1:8080`, separate stack)
+  - `WORKFLOW_API_KEY=<key> WORKFLOW_API_URL=http://host.docker.internal:8080 docker compose up` (filigrane)
+  - Open `http://localhost`, upload a PDF, watermark round-trips through nginx; DevTools shows no `X-Api-Key` on the browser request
+- **Test:** `test/nginx/render.test.sh` (passes locally); `test/nginx/proxy.test.sh` (skips without a Docker daemon - run on a Docker host)
+- **Note:** `.env.example` is gitignored (`.env*`), so env vars are documented in `docker-compose.yml` + `test/nginx/README.md` rather than a tracked file (same finding as stone 2). Scope is local production-style only
+
 ## Next candidates
 
-- Wire filigrane's production nginx to the deployed `Main.Api` (envsubst-inject `X-Api-Key`) and actually deploy the frontend publicly - blocked on filigrane getting its own user-level auth first
-- Add metadata-only anonymization (strip PDF metadata) as a new `ITool` under `Infrastructure/Tools/Anonymization/`, behind a new endpoint
+- Add metadata-only anonymization (strip PDF `/Info` dict + XMP) as a new `ITool` under `Infrastructure/Tools/Anonymization/`, mirroring the watermark token flow (`POST /api/anonymize` -> token -> existing `GET /api/download/{token}`) - deepens the Target, unblocked
+- Deploy filigrane's frontend+nginx to the VPS (e.g. loopback behind host nginx) - edges toward exposure; this is where the "which humans" gate (edge gating vs. per-user auth) finally has to be decided. Logged per the user; not committed to
+- Edge-gate a network-reachable filigrane (basic auth / IP allowlist / VPN) as a cheap stand-in for user auth, if a shared-but-restricted deploy is wanted before building real auth
 
 ## Deliberately deferred
 
 - Image support
 - In-content redaction (manual or AI-assisted)
-- Rate limiting parity with filigrane nginx
+- Rate limiting parity with filigrane nginx (now wired locally via stone 5's nginx; prod deploy still pending)
 - Splitting `Infrastructure` into per-tool-group NuGet packages (single API preferred until a second real consumer with different needs shows up)
 - Deploying filigrane's frontend publicly (needs its own user-level auth first, not just the shared service-to-service `X-Api-Key`)
