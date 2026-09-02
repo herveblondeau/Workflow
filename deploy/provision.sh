@@ -190,21 +190,24 @@ ENV_FILE="$SCRIPT_DIR/.env"
 TOTAL_STAGES=4
 
 banner "Main.Api: deploy to a VPS"
-say "This only deploys workflow-api, bound to 127.0.0.1:8080 on the VPS."
+say "This only deploys workflow-api, bound to 127.0.0.1 on the VPS (host port configurable, default 8080)."
 say "Fronting it with a reverse proxy (nginx, Caddy, whatever you already run) and TLS is on you."
 
 # ── Stage 1: SSH access ─────────────────────────────────────────────────────
 stage "SSH access"
 say "This stage clones/updates the repo on the VPS and starts the containers over SSH."
 ask VPS_SSH "SSH target for the VPS (user@host):"
+ask VPS_SSH_PORT "SSH port (default 22):"
+VPS_SSH_PORT="${VPS_SSH_PORT:-22}"
 step "Checking SSH connectivity..."
-if ssh -o BatchMode=yes -o ConnectTimeout=5 "$VPS_SSH" true 2>/dev/null; then
-  printf '  %s✓ connected%s to %s\n' "$GREEN" "$RESET" "$VPS_SSH"
+if ssh -p "$VPS_SSH_PORT" -o BatchMode=yes -o ConnectTimeout=5 "$VPS_SSH" true 2>/dev/null; then
+  printf '  %s✓ connected%s to %s (port %s)\n' "$GREEN" "$RESET" "$VPS_SSH" "$VPS_SSH_PORT"
 else
-  warn "couldn't reach $VPS_SSH over SSH (key-based auth required). Fix access, then re-run."
+  warn "couldn't reach $VPS_SSH on port $VPS_SSH_PORT over SSH (key-based auth required). Fix access, then re-run."
   exit 1
 fi
 write_env VPS_SSH "$VPS_SSH"
+write_env VPS_SSH_PORT "$VPS_SSH_PORT"
 
 # ── Stage 2: Secrets ─────────────────────────────────────────────────────
 stage "Secrets"
@@ -233,21 +236,24 @@ done
 # ── Stage 3: Deploy ─────────────────────────────────────────────────────
 stage "Deploy"
 say "This clones/pulls the repo on the VPS and runs docker compose up -d --build."
+ask WORKFLOW_HOST_PORT "Host port to publish Main.Api on the VPS loopback (default 8080):"
+WORKFLOW_HOST_PORT="${WORKFLOW_HOST_PORT:-8080}"
+write_env WORKFLOW_HOST_PORT "$WORKFLOW_HOST_PORT"
 if ! confirm "Ready to deploy to $VPS_SSH?"; then
   warn "skipped deploy; re-run this wizard when ready (values already saved)"
 else
   step "Checking docker is available on the VPS..."
-  if ! ssh "$VPS_SSH" 'command -v docker >/dev/null && docker compose version >/dev/null' 2>/dev/null; then
+  if ! ssh -p "$VPS_SSH_PORT" "$VPS_SSH" 'command -v docker >/dev/null && docker compose version >/dev/null' 2>/dev/null; then
     warn "docker (with the compose plugin) isn't available on $VPS_SSH."
     note "Install it first: https://docs.docker.com/engine/install/, then re-run this wizard."
     exit 1
   fi
   step "Cloning/updating the repo on the VPS..."
-  ssh "$VPS_SSH" "if [ -d workflow/.git ]; then cd workflow && git pull; else git clone $REPO_URL workflow; fi"
+  ssh -p "$VPS_SSH_PORT" "$VPS_SSH" "if [ -d workflow/.git ]; then cd workflow && git pull; else git clone $REPO_URL workflow; fi"
   step "Copying deploy/.env to the VPS..."
-  scp "$ENV_FILE" "$VPS_SSH:workflow/deploy/.env" >/dev/null
+  scp -P "$VPS_SSH_PORT" "$ENV_FILE" "$VPS_SSH:workflow/deploy/.env" >/dev/null
   step "Starting containers (docker compose up -d --build)..."
-  ssh "$VPS_SSH" 'cd workflow/deploy && docker compose --env-file .env up -d --build'
+  ssh -p "$VPS_SSH_PORT" "$VPS_SSH" 'cd workflow/deploy && docker compose --env-file .env up -d --build'
   printf '  %s✓ deployed%s\n' "$GREEN" "$RESET"
 fi
 
@@ -256,19 +262,19 @@ stage "Verify"
 say "Checking that Main.Api is reachable on the VPS's loopback interface."
 status=""
 for _ in $(seq 1 12); do
-  status=$(ssh "$VPS_SSH" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/system/status" 2>/dev/null || true)
+  status=$(ssh -p "$VPS_SSH_PORT" "$VPS_SSH" "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:${WORKFLOW_HOST_PORT}/api/system/status" 2>/dev/null || true)
   [[ "$status" == "204" ]] && break
   sleep 5
 done
 if [[ "$status" == "204" ]]; then
-  printf '  %s✓ 127.0.0.1:8080/api/system/status -> 204 (on %s)%s\n' "$GREEN" "$VPS_SSH" "$RESET"
+  printf '  %s✓ 127.0.0.1:%s/api/system/status -> 204 (on %s)%s\n' "$GREEN" "$WORKFLOW_HOST_PORT" "$VPS_SSH" "$RESET"
 else
-  warn "got HTTP $status from 127.0.0.1:8080/api/system/status on $VPS_SSH"
-  note "check: ssh $VPS_SSH 'cd workflow/deploy && docker compose logs'"
+  warn "got HTTP $status from 127.0.0.1:${WORKFLOW_HOST_PORT}/api/system/status on $VPS_SSH"
+  note "check: ssh -p $VPS_SSH_PORT $VPS_SSH 'cd workflow/deploy && docker compose logs'"
 fi
 
 finish
 note "deploy/.env on this machine now holds everything needed to re-run this wizard idempotently."
 note "repo used on the VPS: $REPO_URL"
-note "not done yet: point your reverse proxy at 127.0.0.1:8080 on the VPS and terminate TLS there."
+note "not done yet: point your reverse proxy at 127.0.0.1:$WORKFLOW_HOST_PORT on the VPS and terminate TLS there."
 unset SCRIPT_DIR
