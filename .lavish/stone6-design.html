@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow — Stone 6 (VPS deploy) design</title>
+<style>
+  :root {
+    --page-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1a1d21; --muted:#5c636b;
+    --line:#d9dde2; --accent:#2f6feb; --accent-soft:#e7f0ff; --queued:#1f7a4d; --amber:#9a6700; --amber-soft:#fff6e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#14171a; --card:#1d2126; --ink:#e8ebee; --muted:#9aa2ab;
+      --line:#313842; --accent:#5b8cff; --accent-soft:#1e2b45; --queued:#4fd08a; --amber:#e5b567; --amber-soft:#33280f;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 16px 96px; background:var(--bg); color:var(--ink);
+    font-family:var(--page-font); line-height:1.5; }
+  button { font-family: var(--page-font) !important; }
+  .wrap { max-width:780px; margin:0 auto; }
+  header h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0 0 18px; color:var(--muted); font-size:14px; }
+  code { background:var(--accent-soft); padding:1px 5px; border-radius:4px; font-size:12.5px;
+    font-family:ui-monospace,Menlo,monospace; }
+  .howto { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; margin-bottom:20px; font-size:14px; color:var(--muted); }
+  .howto b { color:var(--ink); }
+  .topbar { margin-bottom:20px; }
+  .btn { font-size:14px; cursor:pointer; background:var(--accent); color:#fff; border:none;
+    border-radius:8px; padding:9px 16px; }
+  .btn.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .q { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:18px; }
+  .q h2 { margin:0 0 6px; font-size:17px; }
+  .q > p { margin:0 0 14px; color:var(--muted); font-size:14px; }
+  .choices { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .choices label { display:flex; gap:10px; align-items:flex-start; padding:10px 12px;
+    border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+  .choices label:hover { border-color:var(--accent); }
+  .choices input[type="radio"] { margin-top:3px; width:16px; height:16px; flex:none; }
+  .choices span { font-size:14px; }
+  .choices span b { color:var(--accent); }
+  .choices small { color:var(--muted); }
+  .otherinput { display:block; width:100%; margin-top:8px; padding:9px 11px; border:1px solid var(--line);
+    border-radius:8px; background:var(--bg); color:var(--ink); font-family:inherit; font-size:14px; }
+  .why { font-size:13px; color:var(--muted); background:var(--accent-soft); border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+  .flag { font-size:13px; color:var(--amber); background:var(--amber-soft); border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+  .queued { margin-left:12px; color:var(--queued); font-size:13px; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Workflow — Stone 6: deploy filigrane to the VPS</h1>
+    <p>Three forks that decide what this stone builds. Recommendations pre-selected. Stone stays unbuilt until you choose.</p>
+  </header>
+
+  <div class="howto">
+    <b>How this works:</b> each card is one decision — the recommended option is already selected, so
+    agreeing is one click then <b>Queue this answer</b>. Use <b>Something else</b> for a different choice.
+    Longer thoughts go in the <b>Conversation panel</b>. Then press <b>Send to Agent</b>.
+  </div>
+
+  <div class="topbar">
+    <button class="btn ghost" onclick="queueAll(['q1','q2','q3'])">Queue all recommendations</button>
+  </div>
+
+  <form class="q" id="q1" data-lavish-question="q1" onsubmit="queueAnswer(event,'q1','Exposure / gate')">
+    <h2>1. Exposure — the "which humans" gate</h2>
+    <p>This is the boundary the journal flagged. The shared <code>X-Api-Key</code> says "this is filigrane", not "this is an allowed user", so anything network-reachable needs a gate deciding <i>which humans</i> get in — unless nobody outside can reach it at all.</p>
+    <div class="choices">
+      <label><input type="radio" name="q1" value="Loopback-only on the VPS, demo via SSH tunnel (no gate)" checked>
+        <span><b>Loopback-only + SSH tunnel — recommended</b><br>
+        Bind filigrane to <code>127.0.0.1</code> on the VPS; reach it through an SSH tunnel to demo. Zero public exposure, no gate, no auth. Thinnest real VPS stone; public exposure becomes a later stone.</span></label>
+      <label><input type="radio" name="q1" value="Public behind host nginx, edge-gated (basic auth / IP allowlist / VPN)">
+        <span>Public, <b>edge-gated</b><br>
+        <small>Reachable on the internet but restricted via HTTP basic auth / IP allowlist / VPN — actually usable without building app auth. More moving parts (TLS, gate config).</small></span></label>
+      <label><input type="radio" name="q1" value="Public, no gate (open gateway)">
+        <span>Public, no gate<br>
+        <small>Anyone can use your API for free. This is the blocked open-gateway case — not recommended.</small></span></label>
+      <label class="other"><input type="radio" name="q1" value="__other__" id="q1_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q1_otherradio" name="q1_other" placeholder="e.g. Tailscale-only access" oninput="pickOther(this)">
+    </div>
+    <div class="why">Loopback-only keeps the "no auth" promise intact and proves the whole stack runs on the VPS. If you want it actually reachable now, edge-gating is the honest way without app auth.</div>
+    <button type="submit" class="btn">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q2" data-lavish-question="q2" onsubmit="queueAnswer(event,'q2','Host topology')">
+    <h2>2. Same VPS as Main.Api, or a separate host?</h2>
+    <p>Stone 3 established "API and clients on separate hosts". Co-locating filigrane departs from that — but keeps Main.Api entirely private.</p>
+    <div class="choices">
+      <label><input type="radio" name="q2" value="Same VPS as Main.Api (filigrane nginx -> 127.0.0.1:8080)" checked>
+        <span><b>Same VPS as Main.Api — recommended</b><br>
+        filigrane's nginx reaches Main.Api at <code>127.0.0.1:8080</code>. The API never goes public, no TLS/key over the internet. Simplest, and more secure. Departs from strict separate-hosts, but that rule was about serving <i>other</i> clients too — which still works.</span></label>
+      <label><input type="radio" name="q2" value="Separate host (filigrane nginx -> Main.Api public HTTPS + X-Api-Key)">
+        <span>Separate host — matches stone 3<br>
+        <small>filigrane on its own VPS, nginx → Main.Api's public HTTPS URL with <code>X-Api-Key</code>. Faithful to the architecture, but needs Main.Api publicly exposed + TLS + a second host.</small></span></label>
+      <label class="other"><input type="radio" name="q2" value="__other__" id="q2_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q2_otherradio" name="q2_other" placeholder="e.g. same host now, split later" oninput="pickOther(this)">
+    </div>
+    <div class="why">Same-host is the pragmatic first deploy and keeps the API private on the box. Splitting hosts is a natural later stone if a second real client appears.</div>
+    <button type="submit" class="btn">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q3" data-lavish-question="q3" onsubmit="queueAnswer(event,'q3','Deploy mechanism')">
+    <h2>3. How does filigrane get deployed?</h2>
+    <p>Main.Api uses <code>deploy/provision.sh</code> (a re-runnable SSH/clone/compose wizard) + <code>deploy/docker-compose.yml</code>, from stone 4.</p>
+    <div class="choices">
+      <label><input type="radio" name="q3" value="filigrane gets its own deploy/ + provision.sh mirroring Workflow's wizard" checked>
+        <span><b>Own <code>deploy/</code> + provision.sh in filigrane — recommended</b><br>
+        Mirror stone 4's wizard in the filigrane repo: generate env, SSH in, clone/update, compose up, smoke-test. Consistent pattern, self-contained per repo.</span></label>
+      <label><input type="radio" name="q3" value="Extend Workflow's provision.sh to also deploy filigrane">
+        <span>One wizard in Workflow deploys both<br>
+        <small>Fewer scripts, but couples the two repos' deploy flows and puts filigrane logic in Workflow.</small></span></label>
+      <label><input type="radio" name="q3" value="Manual docker compose up on the VPS + README, no wizard">
+        <span>Manual + documented, no wizard<br>
+        <small>Just document the compose-up steps; skip scripting. Least effort, least repeatable.</small></span></label>
+      <label class="other"><input type="radio" name="q3" value="__other__" id="q3_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q3_otherradio" name="q3_other" placeholder="e.g. a Makefile target" oninput="pickOther(this)">
+    </div>
+    <div class="why">A filigrane-owned wizard matches the established stone-4 pattern and keeps each repo deployable on its own.</div>
+    <button type="submit" class="btn">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+</div>
+<script>
+function pickOther(input) {
+  const radio = document.getElementById(input.dataset.for);
+  if (radio && !radio.checked) radio.checked = true;
+}
+function queueAnswer(e, qid, label) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  let choice = fd.get(qid);
+  if (choice === '__other__') {
+    const custom = (fd.get(qid + '_other') || '').trim();
+    if (!custom) { form.querySelector('.otherinput').focus(); return; }
+    choice = custom + ' (custom answer)';
+  }
+  window.lavish.queuePrompt(label + ' -> ' + choice, {
+    tag: 'answer', text: qid.toUpperCase() + ': ' + choice,
+    element: form, queueKey: qid,
+    data: { question: qid, answer: choice }
+  });
+  const badge = form.querySelector('.queued');
+  badge.hidden = false;
+  badge.textContent = 'Queued: ' + choice;
+}
+function queueAll(ids) { ids.forEach(id => document.getElementById(id).requestSubmit()); }
+</script>
+</body>
+</html>

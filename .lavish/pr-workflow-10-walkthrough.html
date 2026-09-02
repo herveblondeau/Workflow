@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PR #10 walkthrough — configurable deploy ports</title>
+<style>
+  :root {
+    --page-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg:#f5f6f8; --card:#ffffff; --ink:#1a1d21; --muted:#5c636b; --line:#dde1e6;
+    --accent:#2f6feb; --accent-soft:#e7f0ff; --add:#1f7a4d; --add-bg:#e6f6ec;
+    --del:#b42318; --del-bg:#fdeceb; --amber:#9a6700; --amber-soft:#fff6e0;
+    --code:#f0f2f5; --num:#8a929c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#121519; --card:#1b1f24; --ink:#e7eaee; --muted:#9aa2ab; --line:#2c333c;
+      --accent:#5b8cff; --accent-soft:#1d2b45; --add:#4fd08a; --add-bg:#14301f;
+      --del:#ff8a80; --del-bg:#361817; --amber:#e5b567; --amber-soft:#33280f;
+      --code:#12161b; --num:#5c646e;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:28px 16px 120px; background:var(--bg); color:var(--ink);
+    font-family:var(--page-font); line-height:1.55; }
+  /* lavish appends its gold whiteboard buttons to document.body; <button> won't
+     inherit font-family, so force the page font broadly (this page has none of its own). */
+  button, [id^="wb"], [id^="wb"] button,
+  html body #wbHeader button, html body #wbFullscreen, html body #wbQueue { font-family: var(--page-font) !important; }
+  .wrap { max-width:900px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 18px; font-size:14px; }
+  a.prlink { color:var(--accent); font-weight:600; }
+  code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:12.5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .start { background:var(--accent-soft); border:1px solid var(--accent); border-radius:10px;
+    padding:12px 16px; margin-bottom:22px; font-size:14px; }
+  .start b { color:var(--accent); }
+  h2.section { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    margin:30px 0 12px; border-bottom:1px solid var(--line); padding-bottom:6px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; margin-bottom:14px; }
+  .card .hd { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .step { background:var(--accent); color:#fff; font-weight:700; font-size:13px; border-radius:999px;
+    min-width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; padding:0 8px; }
+  .path { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13.5px; font-weight:600; }
+  .loc { color:var(--muted); font-size:12.5px; }
+  .what { margin:10px 0 6px; font-size:14px; }
+  .what ul.tight { margin:8px 0 0; padding-left:20px; } .what ul.tight li { margin:3px 0; }
+  .conn { font-size:13px; color:var(--accent); background:var(--accent-soft); border-radius:8px;
+    padding:7px 11px; margin:8px 0; }
+  .conn b { color:var(--accent); }
+  details { margin-top:10px; }
+  summary { cursor:pointer; font-size:13px; color:var(--muted); user-select:none; }
+  .diff { background:var(--code); border-radius:8px; margin-top:8px; overflow-x:auto; min-width:0;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  .diff .ln { display:block; white-space:pre; padding:0 12px; }
+  .diff .add { background:var(--add-bg); color:var(--add); }
+  .diff .del { background:var(--del-bg); color:var(--del); }
+  .diff .ctx { color:var(--muted); }
+  .diff .hh  { color:var(--num); background:transparent; }
+  .warn { border-left:3px solid var(--amber); background:var(--amber-soft); border-radius:0 8px 8px 0;
+    padding:9px 13px; margin:10px 0; font-size:13px; }
+  .warn b { color:var(--amber); }
+  .group { background:var(--card); border:1px solid var(--line); border-radius:12px; margin-bottom:12px; }
+  .group > summary { padding:13px 16px; font-weight:600; font-size:14px; color:var(--ink); }
+  .group .body { padding:0 16px 14px; }
+  ul.tight { margin:6px 0; padding-left:20px; } ul.tight li { margin:4px 0; font-size:13.5px; }
+  .mermaid { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; text-align:center; }
+  .filetag { font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+  .plus { color:var(--add); } .minus { color:var(--del); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PR #10 — Stone 6: make Main.Api host port and SSH port configurable</h1>
+  <p class="sub">Workflow · branch <code>stone6-configurable-deploy-ports</code> · 5 files, <span class="plus">+94</span> / <span class="minus">-25</span> · 1 commit · <a class="prlink" href="https://github.com/herveblondeau/Workflow/pull/10/changes" target="_blank" rel="noopener">#10 on GitHub &#8599;</a></p>
+
+  <div class="start">
+    <b>What this PR does.</b> Two values in Main.Api's <code>deploy/</code> were hardcoded — the host
+    port the container publishes (<code>8080</code>) and the SSH port <code>provision.sh</code> uses
+    (<code>22</code>). This makes both configurable via <code>deploy/.env</code>
+    (<code>WORKFLOW_HOST_PORT</code>, <code>VPS_SSH_PORT</code>), so a busy 8080 or a non-standard SSH
+    port no longer blocks a deploy. filigrane stays local; this is a deploy-config stone.<br><br>
+    <b>Start here &#8594;</b> <code class="filetag">deploy/docker-compose.yml</code> — the
+    <code>${WORKFLOW_HOST_PORT:-8080}</code> change is load-bearing; the SSH-port change is a parallel,
+    self-contained thread through <code>provision.sh</code>.
+  </div>
+
+  <div class="mermaid">
+flowchart TD
+  ENV["deploy .env prompts"] --> PROV["provision.sh"]
+  PROV -->|writes host port| ENVF["deploy .env on VPS"]
+  ENVF --> COMPOSE["docker-compose.yml"]
+  COMPOSE -->|publishes host port| API["workflow-api 8080"]
+  PROV -->|ssh over VPS_SSH_PORT| API
+  COMPOSE -.-> TEST["compose-port.test.sh"]
+  </div>
+
+  <h2 class="section">Reading path</h2>
+
+  <div class="card">
+    <div class="hd"><span class="step">1</span><span class="path">deploy/docker-compose.yml</span><span class="loc">+3 / -1 · the core</span></div>
+    <div class="what"><code>- "127.0.0.1:8080:8080"</code> becomes <code>- "127.0.0.1:${WORKFLOW_HOST_PORT:-8080}:8080"</code>. Only the host port varies; the loopback bind and container target <code>8080</code> stay fixed.</div>
+    <div class="conn"><b>Entry point.</b> Defines the variable the wizard feeds and the test pins — read it first.</div>
+    <details><summary>Show hunk</summary><div class="diff"><span class="ln hh">@@ deploy/docker-compose.yml — ports @@</span><span class="ln ctx">     # WORKFLOW_HOST_PORT lets the operator pick a free host port (default 8080)</span><span class="ln ctx">     # when something else already holds 8080 on the box.</span><span class="ln ctx">     ports:</span><span class="ln del">-      - "127.0.0.1:8080:8080"</span><span class="ln add">+      - "127.0.0.1:${WORKFLOW_HOST_PORT:-8080}:8080"</span></div></details>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="step">2</span><span class="path">provision.sh</span><span class="loc">Stage 3 · wiring</span></div>
+    <div class="what">Prompts for <code>WORKFLOW_HOST_PORT</code>, defaults it to 8080, and <code>write_env</code>s it into <code>deploy/.env</code>.</div>
+    <div class="conn"><b>Connects to step 1:</b> produces the value the compose file consumes on the VPS.</div>
+    <div class="warn"><b>Read carefully.</b> The <code>write_env</code> runs <i>before</i> the <code>scp</code> that ships <code>.env</code> to the VPS — that ordering is load-bearing. The remote <code>docker compose --env-file .env</code> reads it from the copied file, so writing it after the copy would silently deploy on 8080.</div>
+    <details><summary>Show hunk</summary><div class="diff"><span class="ln hh">@@ provision.sh — Stage 3 (Deploy) @@</span><span class="ln ctx"> say "This clones/pulls the repo on the VPS and runs docker compose up..."</span><span class="ln add">+ask WORKFLOW_HOST_PORT "Host port to publish Main.Api on the VPS loopback (default 8080):"</span><span class="ln add">+WORKFLOW_HOST_PORT="${WORKFLOW_HOST_PORT:-8080}"</span><span class="ln add">+write_env WORKFLOW_HOST_PORT "$WORKFLOW_HOST_PORT"</span><span class="ln ctx"> if ! confirm "Ready to deploy to $VPS_SSH?"; then</span><span class="ln ctx">   ...</span><span class="ln ctx">   step "Copying deploy/.env to the VPS..."</span><span class="ln del">-  scp "$ENV_FILE" "$VPS_SSH:workflow/deploy/.env" &gt;/dev/null</span><span class="ln add">+  scp -P "$VPS_SSH_PORT" "$ENV_FILE" "$VPS_SSH:workflow/deploy/.env" &gt;/dev/null</span></div></details>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="step">3</span><span class="path">provision.sh</span><span class="loc">Stage 1 + all ssh/scp · wiring</span></div>
+    <div class="what">The SSH-port thread: a <code>VPS_SSH_PORT</code> prompt (default 22) and <code>-p</code>/<code>-P "$VPS_SSH_PORT"</code> threaded through the connectivity check, docker check, clone, <code>scp</code>, and compose-up.</div>
+    <div class="conn"><b>Independent thread:</b> parametrizes the SSH transport; unrelated to the host-port change except that both live in this wizard.</div>
+    <details><summary>Show hunk</summary><div class="diff"><span class="ln hh">@@ provision.sh — Stage 1 (SSH access) @@</span><span class="ln ctx"> ask VPS_SSH "SSH target for the VPS (user@host):"</span><span class="ln add">+ask VPS_SSH_PORT "SSH port (default 22):"</span><span class="ln add">+VPS_SSH_PORT="${VPS_SSH_PORT:-22}"</span><span class="ln ctx"> step "Checking SSH connectivity..."</span><span class="ln del">-if ssh -o BatchMode=yes -o ConnectTimeout=5 "$VPS_SSH" true 2&gt;/dev/null; then</span><span class="ln add">+if ssh -p "$VPS_SSH_PORT" -o BatchMode=yes -o ConnectTimeout=5 "$VPS_SSH" true 2&gt;/dev/null; then</span><span class="ln ctx"> ...</span><span class="ln add">+write_env VPS_SSH_PORT "$VPS_SSH_PORT"</span></div></details>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="step">4</span><span class="path">provision.sh</span><span class="loc">Stage 4 (Verify) · wiring</span></div>
+    <div class="what">The health check curls <code>127.0.0.1:${WORKFLOW_HOST_PORT}</code> over <code>ssh -p "$VPS_SSH_PORT"</code>.</div>
+    <div class="conn"><b>Ties both threads together:</b> the chosen host port reached over the chosen SSH port.</div>
+    <details><summary>Show hunk</summary><div class="diff"><span class="ln hh">@@ provision.sh — Stage 4 (Verify) @@</span><span class="ln del">-  status=$(ssh "$VPS_SSH" "curl ... http://127.0.0.1:8080/api/system/status" ...)</span><span class="ln add">+  status=$(ssh -p "$VPS_SSH_PORT" "$VPS_SSH" "curl ... http://127.0.0.1:${WORKFLOW_HOST_PORT}/api/system/status" ...)</span></div></details>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="step">5</span><span class="path">deploy/test/compose-port.test.sh</span><span class="loc">new, 47 lines · test</span></div>
+    <div class="what">Renders via <code>docker compose config</code> (no daemon) and asserts:<ul class="tight"><li>the published port tracks <code>WORKFLOW_HOST_PORT</code></li><li>it defaults to 8080 when unset</li><li>the loopback bind + container target survive</li></ul></div>
+    <div class="conn"><b>Connects to step 1:</b> pins the compose templating at a daemon-free seam.</div>
+    <details><summary>Show hunk</summary><div class="diff"><span class="ln hh">@@ deploy/test/compose-port.test.sh (new) @@</span><span class="ln ctx">render() { API_KEY=test WORKFLOW_HOST_PORT="$1" docker compose -f "$compose" config; }</span><span class="ln ctx">custom="$(render 9090)"</span><span class="ln ctx">check "custom WORKFLOW_HOST_PORT is published"  'published: "9090"' "$custom"</span><span class="ln ctx">check "custom render keeps loopback bind"       'host_ip: 127.0.0.1' "$custom"</span><span class="ln ctx">check "custom render keeps container target"    'target: 8080'       "$custom"</span><span class="ln ctx">check "defaults to 8080 when unset"             'published: "8080"'  "$default"</span></div></details>
+  </div>
+
+  <div class="card">
+    <div class="hd"><span class="step">6</span><span class="path">.env.example + README.md</span><span class="loc">+8 / +17 -11 · docs</span></div>
+    <div class="what">Document both vars: <code>WORKFLOW_HOST_PORT=8080</code> and <code>VPS_SSH_PORT=22</code> in the example, and mentions across the README's intro, guided-setup, manual-steps, and files sections.</div>
+  </div>
+
+  <h2 class="section">Groups</h2>
+
+  <details class="group" open>
+    <summary>Core logic — 1 file</summary>
+    <div class="body"><ul class="tight">
+      <li><code>deploy/docker-compose.yml</code> — the single <code>${WORKFLOW_HOST_PORT:-8080}</code> substitution.</li>
+    </ul></div>
+  </details>
+  <details class="group">
+    <summary>Wiring — provision.sh</summary>
+    <div class="body"><ul class="tight">
+      <li>two prompts + two <code>.env</code> writes</li>
+      <li><code>-p</code>/<code>-P</code> on five <code>ssh</code>/<code>scp</code> calls</li>
+      <li>verify-stage port/host interpolation</li>
+    </ul></div>
+  </details>
+  <details class="group">
+    <summary>Tests — 1 file</summary>
+    <div class="body"><ul class="tight">
+      <li><code>compose-port.test.sh</code> — <code>docker compose config</code> assertions; skips without the CLI. Passes locally.</li>
+    </ul></div>
+  </details>
+  <details class="group">
+    <summary>Docs — 2 files</summary>
+    <div class="body"><ul class="tight">
+      <li><code>.env.example</code> — adds both vars with comments.</li>
+      <li><code>README.md</code> — mentions both across intro, guided-setup, manual-steps, files.</li>
+    </ul></div>
+  </details>
+
+  <h2 class="section">Read carefully</h2>
+  <div class="warn"><b>Ordering dependency.</b> In Stage 3, <code>write_env WORKFLOW_HOST_PORT</code> runs <i>before</i> the <code>scp</code> that ships <code>.env</code> to the VPS. Writing it after the copy would silently deploy on 8080.</div>
+  <div class="warn"><b>Defaults after ask.</b> <code>${VPS_SSH_PORT:-22}</code> / <code>${WORKFLOW_HOST_PORT:-8080}</code> are applied right after <code>ask</code>, which returns empty on a first-run Enter — without them <code>ssh -p ""</code> / <code>published: ""</code> would break.</div>
+  <div class="warn"><b>Scope.</b> The SSH-port path has <b>no automated test</b> (no <code>remote()</code> helper refactor, by decision) — verified manually against a real VPS.</div>
+
+  <h2 class="section">How to test</h2>
+  <div class="card">
+    <div class="what"><b>Automated (no Docker daemon needed):</b><ul class="tight"><li><code>bash deploy/test/compose-port.test.sh</code> — passes locally; asserts the published port tracks <code>WORKFLOW_HOST_PORT</code>, defaults to 8080, and keeps the loopback bind + container target.</li></ul></div>
+    <div class="what"><b>Demo the render:</b><ul class="tight"><li><code>WORKFLOW_HOST_PORT=9090 docker compose -f deploy/docker-compose.yml config</code> &#8594; <code>published: "9090"</code>.</li><li>Unset it and the same command shows <code>published: "8080"</code>.</li></ul></div>
+    <div class="what"><b>Exercise the wizard:</b><ul class="tight"><li>Re-run <code>./deploy/provision.sh</code> — it now prompts for <code>VPS_SSH_PORT</code> (Stage 1) and <code>WORKFLOW_HOST_PORT</code> (Stage 3) and writes both to <code>deploy/.env</code>.</li></ul></div>
+    <div class="warn"><b>SSH port — manual only.</b> Point <code>provision.sh</code> at a VPS whose SSH listens on a non-22 port; confirm the connectivity check, clone, <code>scp</code>, compose-up, and verify all succeed over <code>-p/-P $VPS_SSH_PORT</code>. There's no automated coverage for this path.</div>
+  </div>
+
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.esm.min.mjs";
+
+  // Render Mermaid in a theme that matches the artifact page, and re-render when
+  // the viewer flips the page theme - Mermaid never restyles an already-rendered
+  // SVG on its own, so a fixed theme clashes in either light or dark mode.
+  const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
+  // Normalize any CSS color the browser produces (rgb, oklch, hsl, named, ...)
+  // to [r, g, b, a] bytes via a 1x1 canvas, so parsing never breaks on modern
+  // color syntaxes like DaisyUI's oklch() values.
+  const paint = document.createElement("canvas").getContext("2d");
+  function toRgba(color) {
+    paint.clearRect(0, 0, 1, 1);
+    paint.fillStyle = "#000";
+    paint.fillStyle = color;
+    paint.fillRect(0, 0, 1, 1);
+    return paint.getImageData(0, 0, 1, 1).data;
+  }
+
+  function compositeRgba(foreground, background) {
+    const foregroundAlpha = foreground[3] / 255;
+    const backgroundAlpha = background[3] / 255;
+    const alpha = foregroundAlpha + backgroundAlpha * (1 - foregroundAlpha);
+    if (alpha === 0) return [0, 0, 0, 0];
+    return [
+      (foreground[0] * foregroundAlpha + background[0] * backgroundAlpha * (1 - foregroundAlpha)) / alpha,
+      (foreground[1] * foregroundAlpha + background[1] * backgroundAlpha * (1 - foregroundAlpha)) / alpha,
+      (foreground[2] * foregroundAlpha + background[2] * backgroundAlpha * (1 - foregroundAlpha)) / alpha,
+      alpha * 255,
+    ];
+  }
+
+  function pageIsDark() {
+    // Trust the actually-rendered page background so this works with any theming
+    // mechanism: prefers-color-scheme, a data-theme attribute, or plain CSS.
+    const root = document.documentElement;
+    const rootBackground = toRgba(getComputedStyle(root).backgroundColor);
+    const bodyBackground = document.body ? toRgba(getComputedStyle(document.body).backgroundColor) : [0, 0, 0, 0];
+    const [r, g, b, a] = compositeRgba(bodyBackground, rootBackground);
+    if (a > 0) {
+      return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 < 0.5;
+    }
+    const colorScheme = getComputedStyle(root).colorScheme;
+    if (colorScheme.includes("dark") && !colorScheme.includes("light")) return true;
+    if (colorScheme.includes("light") && !colorScheme.includes("dark")) return false;
+    return darkQuery.matches;
+  }
+
+  const diagrams = [...document.querySelectorAll(".mermaid")].map((el) => ({ el, src: el.textContent }));
+  let applied;
+  let rendering = false;
+  let queued = false;
+  function queueRender() {
+    queued = true;
+    if (rendering) return;
+    void render();
+  }
+  async function render() {
+    rendering = true;
+    try {
+      while (queued) {
+        queued = false;
+        const theme = pageIsDark() ? "dark" : "default";
+        if (theme === applied) continue;
+        mermaid.initialize({ startOnLoad: false, theme, securityLevel: "strict" });
+        for (const { el, src } of diagrams) {
+          el.removeAttribute("data-processed");
+          el.textContent = src;
+        }
+        try {
+          await mermaid.run({ nodes: diagrams.map((d) => d.el) });
+        } catch (error) {
+          console.error("Mermaid diagram render failed:", error);
+          return;
+        }
+        applied = theme;
+      }
+    } finally {
+      rendering = false;
+      if (queued) queueRender();
+    }
+  }
+
+  // First render once stylesheets are applied (no wrong-theme flash), then keep
+  // the diagrams in sync with page-theme toggles and OS light/dark changes.
+  if (document.readyState === "complete") queueRender();
+  else window.addEventListener("load", queueRender, { once: true });
+  const themeObserver = new MutationObserver(queueRender);
+  for (const el of [document.documentElement, document.body]) {
+    if (!el) continue;
+    themeObserver.observe(el, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class", "style"],
+    });
+  }
+  document.addEventListener("change", queueRender, true);
+  document.addEventListener(
+    "transitionend",
+    ({ propertyName }) => {
+      if (propertyName === "background-color") queueRender();
+    },
+    true,
+  );
+  darkQuery.addEventListener("change", queueRender);
+</script>
+</body>
+</html>
