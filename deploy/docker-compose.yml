@@ -8,8 +8,10 @@ services:
     # Bound to loopback only: the operator's own reverse proxy (nginx, Caddy,
     # whatever) runs on the host and proxies to this port. TLS termination
     # and public routing are that reverse proxy's job, not this compose file's.
+    # WORKFLOW_HOST_PORT lets the operator pick a free host port (default 8080)
+    # when something else already holds 8080 on the box.
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${WORKFLOW_HOST_PORT:-8080}:8080"
     volumes:
       - workflow-storage:/app/storage
     environment:
