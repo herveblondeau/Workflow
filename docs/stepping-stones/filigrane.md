@@ -89,7 +89,7 @@ None yet
   - Point any reverse proxy at that port and terminate TLS there; verified against the real VPS (a previously-provisioned Caddy container had in fact never started, since host nginx already held 80/443 - cleaned up manually, outside this PR)
 - **Test:** no new application logic to pin; `dotnet build` and `docker compose config` verified clean
 
-### 5. Wire filigrane's prod nginx to Main.Api, inject X-Api-Key server-side (filigrane PR `#6`)
+### 5. Wire filigrane's prod nginx to Main.Api, inject X-Api-Key server-side (filigrane PR `#6`, merged)
 
 - **Added (filigrane repo):**
   - `frontend/nginx.conf` -> `nginx.conf.template`: `/api/*` upstream now `${WORKFLOW_API_URL}` (was the deleted `api:8080`); each `/api` location injects `proxy_set_header X-Api-Key "${WORKFLOW_API_KEY}"`. Existing rate-limit zones kept as-is
