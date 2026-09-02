@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workflow - deploy config stone</title>
+<style>
+  :root {
+    --page-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --muted:#5c636b; --line:#d9dde2;
+    --accent:#2f6feb; --accent-soft:#e7f0ff; --queued:#1f7a4d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#14171a; --card:#1d2126; --ink:#e8ebee; --muted:#9aa2ab; --line:#313842;
+      --accent:#5b8cff; --accent-soft:#1e2b45; --queued:#4fd08a;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 16px 96px; background:var(--bg); color:var(--ink);
+    font-family:var(--page-font); line-height:1.5; }
+  .wrap { max-width:760px; margin:0 auto; }
+  header h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0 0 20px; color:var(--muted); font-size:14px; }
+  code { background:var(--accent-soft); padding:1px 5px; border-radius:4px; font-size:12.5px; }
+  .howto { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; margin-bottom:20px; font-size:14px; color:var(--muted); }
+  .howto b { color:var(--ink); }
+  .topbar { margin-bottom:20px; }
+  button { font-family:var(--page-font); font-size:14px; cursor:pointer; background:var(--accent);
+    color:#fff; border:none; border-radius:8px; padding:9px 16px; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  .q { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 22px; margin-bottom:18px; }
+  .q h2 { margin:0 0 6px; font-size:17px; }
+  .q > p { margin:0 0 14px; color:var(--muted); font-size:14px; }
+  .choices { display:flex; flex-direction:column; gap:10px; margin-bottom:12px; }
+  .choices label { display:flex; gap:10px; align-items:flex-start; padding:10px 12px;
+    border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+  .choices label:hover { border-color:var(--accent); }
+  .choices input[type="radio"] { margin-top:3px; width:16px; height:16px; flex:none; }
+  .choices span { font-size:14px; }
+  .choices span b { color:var(--accent); }
+  .choices small { color:var(--muted); }
+  .otherinput { display:block; width:100%; margin-top:8px; padding:9px 11px; border:1px solid var(--line);
+    border-radius:8px; background:var(--bg); color:var(--ink); font-family:var(--page-font); font-size:14px; }
+  .why { font-size:13px; color:var(--muted); background:var(--accent-soft); border-radius:8px; padding:8px 12px; margin-bottom:12px; }
+  .queued { margin-left:12px; color:var(--queued); font-size:13px; font-weight:600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Deploy config — a new stone?</h1>
+    <p>We agreed making the app port + SSH port configurable is legitimate (a real VPS is the "second real case"). Three decisions before designing it. Recommendations pre-selected.</p>
+  </header>
+
+  <div class="howto">
+    <b>How this works:</b> each card is one decision — the recommended option is pre-selected, so agreeing
+    is one click then <b>Queue this answer</b>. Use <b>Something else</b> for a different choice. Longer
+    thoughts go in the <b>Conversation panel</b>. Then press <b>Send to Agent</b>. Nothing gets built yet.
+  </div>
+
+  <div class="topbar">
+    <button class="ghost" onclick="queueAll(['q1','q2','q3'])">Queue all recommendations</button>
+  </div>
+
+  <form class="q" id="q1" data-lavish-question="q1" onsubmit="queueAnswer(event,'q1','Approach')">
+    <h2>1. How do we treat this?</h2>
+    <p>The configurability lives in Workflow's <code>deploy/</code> (stones 3/4 territory), not filigrane's nginx (stone 5).</p>
+    <div class="choices">
+      <label><input type="radio" name="q1" value="Its own new stone" checked>
+        <span><b>Its own new stone — recommended</b><br>Small hardening stone in <code>deploy/</code>, recorded as "revealed by real VPS deploy during stone 5 review." Keeps concerns and PRs separate.</span></label>
+      <label><input type="radio" name="q1" value="Fold into stone 5 / PR #6">
+        <span>Fold into stone 5 (PR #6)<br><small>Breaks one-capability-per-stone and mixes a different repo/concern into the filigrane PR.</small></span></label>
+      <label><input type="radio" name="q1" value="Leave hardcoded, document as manual steps">
+        <span>Leave hardcoded, just document<br><small>Now unjustified — a real case exists, so the config earns its keep.</small></span></label>
+      <label class="other"><input type="radio" name="q1" value="__other__" id="q1_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q1_otherradio" name="q1_other" placeholder="e.g. hand off to /wayfinder first" oninput="pickOther(this)">
+    </div>
+    <div class="why">A new stone is the textbook fit: refines stones 3/4 without rewriting them, and the journal records what revealed it.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q2" data-lavish-question="q2" onsubmit="queueAnswer(event,'q2','Compose port change')">
+    <h2>2. What did you change in the compose port mapping?</h2>
+    <p>This decides whether stone 4's loopback-only decision (<code>127.0.0.1:8080</code>) stays intact.</p>
+    <div class="choices">
+      <label><input type="radio" name="q2" value="Only the host port (kept loopback binding)" checked>
+        <span><b>Only the host port — recommended path</b><br>e.g. <code>127.0.0.1:9090:8080</code> to dodge an 8080 conflict. Loopback decision preserved; we just make the host port a variable.</span></label>
+      <label><input type="radio" name="q2" value="Also changed the loopback binding (exposed beyond 127.0.0.1)">
+        <span>Also changed the loopback binding<br><small>e.g. exposed on <code>0.0.0.0</code> — that revisits stone 4's deliberate loopback-only stance and needs its own discussion.</small></span></label>
+      <label class="other"><input type="radio" name="q2" value="__other__" id="q2_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q2_otherradio" name="q2_other" placeholder="e.g. changed the container port too" oninput="pickOther(this)">
+    </div>
+    <div class="why">If it's just the host port, the stone is trivial and safe. If loopback changed, that's a separate design call worth surfacing.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q3" data-lavish-question="q3" onsubmit="queueAnswer(event,'q3','Stone scope')">
+    <h2>3. One stone or two?</h2>
+    <p>Two knobs: the compose published port, and the SSH port in <code>provision.sh</code>.</p>
+    <div class="choices">
+      <label><input type="radio" name="q3" value="Both knobs in one stone" checked>
+        <span><b>Both in one stone — recommended</b><br>Same theme ("make the deploy fit a real host"), demoed by one VPS provision run. Cohesive, not padded.</span></label>
+      <label><input type="radio" name="q3" value="Two separate smaller stones">
+        <span>Two smaller stones<br><small>One for the app port, one for the SSH port. More granular but each demo overlaps heavily.</small></span></label>
+      <label class="other"><input type="radio" name="q3" value="__other__" id="q3_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q3_otherradio" name="q3_other" placeholder="e.g. SSH port first, app port later" oninput="pickOther(this)">
+    </div>
+    <div class="why">Both are the same "survive contact with a real VPS" capability and share one demo, so one stone reads cleanly.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+</div>
+<script>
+function pickOther(input) {
+  const radio = document.getElementById(input.dataset.for);
+  if (radio && !radio.checked) radio.checked = true;
+}
+function queueAnswer(e, qid, label) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  let choice = fd.get(qid);
+  if (choice === '__other__') {
+    const custom = (fd.get(qid + '_other') || '').trim();
+    if (!custom) { form.querySelector('.otherinput').focus(); return; }
+    choice = custom + ' (custom answer)';
+  }
+  window.lavish.queuePrompt(label + ' -> ' + choice, {
+    tag: 'answer', text: qid.toUpperCase() + ': ' + choice,
+    element: form, queueKey: qid,
+    data: { question: qid, answer: choice }
+  });
+  const badge = form.querySelector('.queued');
+  badge.hidden = false;
+  badge.textContent = 'Queued: ' + choice;
+}
+function queueAll(ids) { ids.forEach(id => document.getElementById(id).requestSubmit()); }
+</script>
+</body>
+</html>

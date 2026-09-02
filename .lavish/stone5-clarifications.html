@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stone 5 — clarifications</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1a1d21; --muted: #5c636b;
+    --line: #d9dde2; --accent: #2f6feb; --accent-soft: #e7f0ff; --queued: #1f7a4d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --card: #1d2126; --ink: #e8ebee; --muted: #9aa2ab;
+      --line: #313842; --accent: #5b8cff; --accent-soft: #1e2b45; --queued: #4fd08a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px 96px; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 0 0 20px; color: var(--muted); }
+  .howto {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 20px; font-size: 14px; color: var(--muted);
+  }
+  .howto b { color: var(--ink); }
+  code { background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .topbar { margin-bottom: 20px; }
+  button {
+    font-family: inherit; font-size: 14px; cursor: pointer;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 16px;
+  }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .q { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin-bottom: 18px; }
+  .q h2 { margin: 0 0 6px; font-size: 17px; }
+  .q > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .choices label {
+    display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  }
+  .choices label:hover { border-color: var(--accent); }
+  .choices input[type="radio"] { margin-top: 3px; width: 16px; height: 16px; flex: none; }
+  .choices span { font-size: 14px; }
+  .choices span b { color: var(--accent); }
+  .choices small { color: var(--muted); }
+  .otherinput {
+    display: block; width: 100%; margin-top: 8px; padding: 9px 11px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    color: var(--ink); font-family: inherit; font-size: 14px;
+  }
+  .why { font-size: 13px; color: var(--muted); background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+  .queued { margin-left: 12px; color: var(--queued); font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Stone 5 — clarifications</h1>
+    <p>You approved stone 5. These are loose ends it left, not blockers. Recommendations pre-selected.</p>
+  </header>
+
+  <div class="howto">
+    <b>How this works:</b> each card is one decision — the recommended option is already selected, so
+    agreeing is one click then <b>Queue this answer</b>. Use <b>Something else</b> for a different choice.
+    Longer thoughts go in the <b>Conversation panel</b>. Then press <b>Send to Agent</b>.
+  </div>
+
+  <div class="topbar">
+    <button class="ghost" onclick="queueAll(['q1','q2','q3','q4'])">Queue all recommendations</button>
+  </div>
+
+  <form class="q" id="q1" data-lavish-question="q1" onsubmit="queueAnswer(event,'q1','Verify proxy test')">
+    <h2>1. Verify the behavioural test?</h2>
+    <p><code>render.test.sh</code> passed here, but <code>proxy.test.sh</code> (real nginx + stub upstream,
+    live key injection + <code>429</code>) <b>skipped</b> — no Docker daemon in my sandbox. So the live behaviour is unproven on my side.</p>
+    <div class="choices">
+      <label><input type="radio" name="q1" value="You run proxy.test.sh on your Docker host and confirm" checked>
+        <span><b>You run it on your Fedora box — recommended</b><br>
+        <code>bash test/nginx/proxy.test.sh</code>. Confirms live injection + rate-limit before we call stone 5 fully verified.</span></label>
+      <label><input type="radio" name="q1" value="Accept stone 5 as-is; render test is enough">
+        <span>Accept as-is<br><small>Trust the render test + config review; skip the live run.</small></span></label>
+      <label class="other"><input type="radio" name="q1" value="__other__" id="q1_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q1_otherradio" name="q1_other" placeholder="e.g. wire it into CI" oninput="pickOther(this)">
+    </div>
+    <div class="why">I can't run it here; a 10-second run on your machine closes the only verification gap.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q2" data-lavish-question="q2" onsubmit="queueAnswer(event,'q2','Tracked env sample')">
+    <h2>2. A tracked env sample file?</h2>
+    <p>filigrane's <code>.gitignore</code> has <code>.env*</code>, so <code>.env.example</code> is <b>untracked</b>. This bit us in stone 2 and again now — new env vars (<code>WORKFLOW_API_URL</code>, <code>WORKFLOW_API_KEY</code>) only live in compose comments + the test README.</p>
+    <div class="choices">
+      <label><input type="radio" name="q2" value="Add a tracked sample file (e.g. env.sample) outside the .env* ignore" checked>
+        <span><b>Add a tracked <code>env.sample</code> — recommended</b><br>
+        A differently-named file the ignore rule doesn't catch, so onboarding env vars are finally in git. Tiny make-room change.</span></label>
+      <label><input type="radio" name="q2" value="Leave it; document env vars in README/compose only">
+        <span>Leave as-is<br><small>Keep env vars in compose comments + README; no tracked sample.</small></span></label>
+      <label class="other"><input type="radio" name="q2" value="__other__" id="q2_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q2_otherradio" name="q2_other" placeholder="e.g. narrow the .gitignore rule instead" oninput="pickOther(this)">
+    </div>
+    <div class="why">Recurring gap; a tracked sample is the smallest durable fix. Could fold into the stone-5 PR or be its own tiny stone.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q3" data-lavish-question="q3" onsubmit="queueAnswer(event,'q3','Merge PR #6')">
+    <h2>3. Who merges PR #6?</h2>
+    <p>Constraints say a PR per stone, but not who merges. <a href="https://github.com/herveblondeau/filigrane/pull/6">filigrane#6</a> is open.</p>
+    <div class="choices">
+      <label><input type="radio" name="q3" value="You review and merge #6 yourself" checked>
+        <span><b>You merge it — recommended</b><br>You own the repo and the review; I leave it open for you.</span></label>
+      <label><input type="radio" name="q3" value="I merge #6 now via gh-axi">
+        <span>I merge it now<br><small>Via gh-axi, once you say go.</small></span></label>
+      <label class="other"><input type="radio" name="q3" value="__other__" id="q3_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q3_otherradio" name="q3_other" placeholder="e.g. merge after you run the proxy test" oninput="pickOther(this)">
+    </div>
+    <div class="why">You've merged the earlier stone PRs; defaulting to you keeps that pattern.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q4" data-lavish-question="q4" onsubmit="queueAnswer(event,'q4','File-size guard')">
+    <h2>4. The file-size limit <small>(corrected)</small></h2>
+    <p><b>Correction:</b> my earlier claim was wrong — Main.Api's watermark action <b>already has</b>
+    <code>[RequestSizeLimit(4_194_304)]</code> (4 MB), matching nginx's <code>client_max_body_size 4M</code>.
+    Defense-in-depth is already in place; nothing to restore. The only live sub-question: the old backend's cap was 3 MB, so the canonical max is now <b>4 MB</b>.</p>
+    <div class="choices">
+      <label><input type="radio" name="q4" value="Leave both at 4 MB (already coherent)" checked>
+        <span><b>Leave both at 4 MB — recommended</b><br>App limit + nginx already agree at 4 MB; nothing to do.</span></label>
+      <label><input type="radio" name="q4" value="Lower both to the old 3 MB cap">
+        <span>Lower both to the old 3 MB cap<br><small>Restore the historical max: set nginx to 3M and the attribute to 3145728.</small></span></label>
+      <label class="other"><input type="radio" name="q4" value="__other__" id="q4_otherradio"><span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q4_otherradio" name="q4_other" placeholder="e.g. set nginx to 3M to match the old cap" oninput="pickOther(this)">
+    </div>
+    <div class="why">Both layers already cap at 4 MB, so this is just: keep 4 MB, or restore the old 3 MB. No missing guard.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+</div>
+<script>
+function pickOther(input) {
+  const radio = document.getElementById(input.dataset.for);
+  if (radio && !radio.checked) radio.checked = true;
+}
+function queueAnswer(e, qid, label) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  let choice = fd.get(qid);
+  if (choice === '__other__') {
+    const custom = (fd.get(qid + '_other') || '').trim();
+    if (!custom) { form.querySelector('.otherinput').focus(); return; }
+    choice = custom + ' (custom answer)';
+  }
+  window.lavish.queuePrompt(label + ' -> ' + choice, {
+    tag: 'answer', text: qid.toUpperCase() + ': ' + choice,
+    element: form, queueKey: qid,
+    data: { question: qid, answer: choice }
+  });
+  const badge = form.querySelector('.queued');
+  badge.hidden = false;
+  badge.textContent = 'Queued: ' + choice;
+}
+function queueAll(ids) { ids.forEach(id => document.getElementById(id).requestSubmit()); }
+</script>
+</body>
+</html>

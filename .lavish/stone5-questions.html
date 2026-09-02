@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filigrane — Stone 5 decisions</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1a1d21; --muted: #5c636b;
+    --line: #d9dde2; --accent: #2f6feb; --accent-soft: #e7f0ff; --queued: #1f7a4d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171a; --card: #1d2126; --ink: #e8ebee; --muted: #9aa2ab;
+      --line: #313842; --accent: #5b8cff; --accent-soft: #1e2b45; --queued: #4fd08a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px 96px; background: var(--bg); color: var(--ink);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  header h1 { margin: 0 0 6px; font-size: 22px; }
+  header p { margin: 0 0 20px; color: var(--muted); }
+  .howto {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 20px; font-size: 14px; color: var(--muted);
+  }
+  .howto b { color: var(--ink); }
+  .topbar { margin-bottom: 20px; }
+  button {
+    font-family: inherit; font-size: 14px; cursor: pointer;
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 16px;
+  }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .q {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 22px; margin-bottom: 18px;
+  }
+  .q h2 { margin: 0 0 6px; font-size: 17px; }
+  .q > p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .choices { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .choices label {
+    display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  }
+  .choices label:hover { border-color: var(--accent); }
+  .choices input[type="radio"] { margin-top: 3px; width: 16px; height: 16px; flex: none; }
+  .choices span { font-size: 14px; }
+  .choices span b { color: var(--accent); }
+  .choices small { color: var(--muted); }
+  .otherinput {
+    display: block; width: 100%; margin-top: 8px; padding: 9px 11px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+    color: var(--ink); font-family: inherit; font-size: 14px;
+  }
+  .why {
+    font-size: 13px; color: var(--muted); background: var(--accent-soft);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 12px;
+  }
+  .queued { margin-left: 12px; color: var(--queued); font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Filigrane — Stone 5</h1>
+    <p>Three decisions before I write the stone-5 proposal. Recommendations are pre-selected.</p>
+  </header>
+
+  <div class="howto">
+    <b>How this works:</b> each card is one decision — the recommended option is already selected, so
+    agreeing is one click then <b>Queue this answer</b>. Use <b>Something else</b> for a different
+    choice. Anything longer — a challenge to my framing or a follow-up — goes in the
+    <b>Conversation panel</b>, not the radios. Then press <b>Send to Agent</b>.
+  </div>
+
+  <div class="howto" style="border-color:var(--accent)">
+    <b>Where the app is right now (stones 1–4):</b> Main.Api hosts PDF watermarking
+    (<code>POST /api/watermark</code> → token → <code>GET /api/download/{token}</code>), guarded by
+    <code>X-Api-Key</code>. <code>Main.Api/.env</code> already has <code>API_KEY</code> set. Two ways to test:
+    <br><br>
+    <b>A — API directly (fastest):</b>
+    <br>1. <code>cd Main.Api &amp;&amp; dotnet run --launch-profile https</code> (reads <code>.env</code>)
+    <br>2. <code>curl -k -H "X-Api-Key: $KEY" -F "file=@in.pdf" -F "watermarkType=Invisible" -F "contentType=Custom" -F "customText=HELLO" https://localhost:7156/api/watermark</code>
+    <br>3. <code>curl -k -H "X-Api-Key: $KEY" -L -o out.pdf https://localhost:7156/api/download/&lt;token&gt;</code>
+    <br>(<code>$KEY</code> = the value in <code>Main.Api/.env</code>)
+    <br><br>
+    <b>B — full local frontend → local API (the "local only" flow):</b>
+    <br>1. Terminal 1: <code>cd Main.Api &amp;&amp; dotnet run --launch-profile http</code> (→ :5261)
+    <br>2. Terminal 2: <code>cd ../filigrane/frontend &amp;&amp; WORKFLOW_API_KEY=$KEY npm run dev</code>
+    <br>3. Open the printed URL, upload a PDF, watermark it. DevTools Network shows <b>no</b> <code>X-Api-Key</code> on the browser's own request — the vite proxy injects it server-side.
+    <br><br>
+    <b>C — local frontend → <i>prod</i> API (also fine &amp; safe):</b> same as B but point the proxy at the deployed API:
+    <br><code>WORKFLOW_API_URL=https://&lt;domain&gt; WORKFLOW_API_KEY=$KEY npm run dev</code>
+    <br>Only you reach the local frontend and the key stays on your machine, so this is still the "local only" case. <b>Not</b> the blocked one — that's serving the <i>frontend</i> itself publicly to strangers.
+    <br><br>
+    <b>Where nginx fits:</b> filigrane's <i>own</i> production nginx is the prod analog of the vite proxy — it would serve the built frontend and inject <code>X-Api-Key</code> when proxying <code>/api/*</code>. It's currently <b>unwired</b> (deferred). It only matters when serving the frontend to others; for flows B and C, vite is your proxy and nginx never appears.
+  </div>
+
+  <div class="topbar">
+    <button class="ghost" onclick="queueAll(['q1','q2','q3'])">Queue all recommendations</button>
+  </div>
+
+  <form class="q" id="q1" data-lavish-question="q1" onsubmit="queueAnswer(event,'q1','Direction')">
+    <h2>1. What is stone 5? (really: who reaches the frontend?)</h2>
+    <p>Everything hinges on one fork. There's a <b>single shared</b> <code>API_KEY</code>, and nginx/proxy
+    injects it server-side — the visitor presents nothing — so the key means "this is filigrane", not
+    "this is user X". Per-user keys (LLM-style) would mean each user mints and presents their own key,
+    which is building user auth. Given that:</p>
+    <div class="choices">
+      <label><input type="radio" name="q1" value="Frontend stays local -> stone 5 = metadata anonymization" checked>
+        <span><b>Local only — recommended → stone 5 = anonymization</b><br>
+        If only you reach it locally, it <i>already works</i> (stone 2 proxy + stone 3/4 demo): no gating, no prod nginx, no stone there. So make stone 5 the metadata-anonymization <code>ITool</code> instead.</span></label>
+      <label><input type="radio" name="q1" value="Network-reachable, gated at the edge (basic auth / IP allowlist)">
+        <span>Network-reachable — <b>edge gating</b> as stone 5<br>
+        <small>If others reach it over the network, wire prod nginx but restrict <i>which humans</i> via basic auth / IP allowlist / VPN — the cheap stand-in for user auth.</small></span></label>
+      <label><input type="radio" name="q1" value="Network-reachable, per-user auth (build the auth subsystem)">
+        <span>Network-reachable — <b>per-user auth</b> as its own effort<br>
+        <small>Distinct key/login per user. This is the real auth subsystem, a bigger effort than one stone.</small></span></label>
+      <label class="other"><input type="radio" name="q1" value="__other__" id="q1_otherradio">
+        <span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q1_otherradio" name="q1_other"
+             placeholder="e.g. tackle filigrane user auth as its own effort first" oninput="pickOther(this)">
+    </div>
+    <div class="why">You just said local-only — that unblocks nothing new and makes stone 5 anonymization. Only pick a network option if you actually want others reaching the frontend now.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q2" data-lavish-question="q2" onsubmit="queueAnswer(event,'q2','Strip scope')">
+    <h2>2. What does "strip metadata" cover?</h2>
+    <p>PDFs carry two metadata layers, and they're different code paths.</p>
+    <div class="choices">
+      <label><input type="radio" name="q2" value="Info dictionary + XMP" checked>
+        <span><b>Both: /Info dictionary + XMP packet — recommended</b><br>
+        Author/Title/Producer/dates <i>and</i> the XMP stream. Anything less leaves identifying data behind.</span></label>
+      <label><input type="radio" name="q2" value="Info dictionary only">
+        <span>Just the /Info dictionary<br>
+        <small>Smaller stone, but XMP can still leak author/tool metadata.</small></span></label>
+      <label class="other"><input type="radio" name="q2" value="__other__" id="q2_otherradio">
+        <span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q2_otherradio" name="q2_other"
+             placeholder="e.g. also strip embedded thumbnails / attachments" oninput="pickOther(this)">
+    </div>
+    <div class="why">Recommend both: "anonymize" that leaves XMP intact would surprise users and defeat the point.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+  <form class="q" id="q3" data-lavish-question="q3" onsubmit="queueAnswer(event,'q3','Endpoint shape')">
+    <h2>3. Endpoint & delivery shape</h2>
+    <p>Watermarking already has a token flow and storage/cleanup service.</p>
+    <div class="choices">
+      <label><input type="radio" name="q3" value="Mirror watermark: POST /api/anonymize + token download" checked>
+        <span><b>Mirror watermark — recommended</b><br>
+        <code>POST /api/anonymize</code> → token → reuse existing <code>GET /api/download/{token}</code> + cleanup service.</span></label>
+      <label><input type="radio" name="q3" value="Single endpoint with an operation flag">
+        <span>One endpoint with a watermark/anonymize flag<br>
+        <small>Fewer routes, but couples two tools and complicates the contract.</small></span></label>
+      <label class="other"><input type="radio" name="q3" value="__other__" id="q3_otherradio">
+        <span>Something else</span></label>
+      <input type="text" class="otherinput" data-for="q3_otherradio" name="q3_other"
+             placeholder="e.g. synchronous inline response instead of token flow" oninput="pickOther(this)">
+    </div>
+    <div class="why">Recommend mirroring: reuses the token/storage/cleanup plumbing, keeps each tool's contract clean.</div>
+    <button type="submit">Queue this answer</button><span class="queued" hidden></span>
+  </form>
+
+</div>
+<script>
+function pickOther(input) {
+  const radio = document.getElementById(input.dataset.for);
+  if (radio && !radio.checked) radio.checked = true;
+}
+function queueAnswer(e, qid, label) {
+  e.preventDefault();
+  const form = e.currentTarget;
+  const fd = new FormData(form);
+  let choice = fd.get(qid);
+  if (choice === '__other__') {
+    const custom = (fd.get(qid + '_other') || '').trim();
+    if (!custom) { form.querySelector('.otherinput').focus(); return; }
+    choice = custom + ' (custom answer)';
+  }
+  window.lavish.queuePrompt(label + ' -> ' + choice, {
+    tag: 'answer', text: qid.toUpperCase() + ': ' + choice,
+    element: form, queueKey: qid,
+    data: { question: qid, answer: choice }
+  });
+  const badge = form.querySelector('.queued');
+  badge.hidden = false;
+  badge.textContent = 'Queued: ' + choice;
+}
+function queueAll(ids) { ids.forEach(id => document.getElementById(id).requestSubmit()); }
+</script>
+</body>
+</html>
