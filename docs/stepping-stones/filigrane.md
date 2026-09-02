@@ -108,10 +108,23 @@ None yet
 - **Note:** env vars are documented in `docker-compose.yml` + `test/nginx/README.md`; a follow-up commit (`cef1b41`) also negates the `.env*` ignore for `.env.example` so it's tracked, closing the recurring stone-2 gap. Scope is local production-style only
 - **Follow-up finding:** Main.Api's watermark action already has `[RequestSizeLimit(4_194_304)]` (4 MB), matching nginx's `client_max_body_size 4M` - so app-level + proxy size guards already agree; no change needed. Open (minor): the old backend's cap was 3 MB, so the canonical max is now 4 MB, not 3 MB
 
+### 6. Make Main.Api's deploy host port + SSH port configurable (Workflow PR `#10`)
+
+- **Redefined mid-design:** started as "deploy filigrane to the VPS" but the user chose to keep filigrane local and instead close two deploy-config gaps noticed during stone 5
+- **Added (Workflow `deploy/`):**
+  - `docker-compose.yml`: publishes `127.0.0.1:${WORKFLOW_HOST_PORT:-8080}:8080` (loopback bind + container target 8080 unchanged) so a busy 8080 on the box can be sidestepped
+  - `provision.sh`: prompts for `WORKFLOW_HOST_PORT` (default 8080) and `VPS_SSH_PORT` (default 22), saves both to `deploy/.env`, threads `-p`/`-P` through every `ssh`/`scp`, verifies the chosen port
+  - `.env.example` + `README.md`: document both vars
+  - `deploy/test/compose-port.test.sh`: asserts the published port tracks `WORKFLOW_HOST_PORT` (default 8080)
+- **Revealed:** `docker compose config` renders the effective compose file with no daemon - a cheap seam for testing compose templating. The SSH-port path stays untested (no helper refactor, by decision); the user verifies it manually
+- **Demo:** `WORKFLOW_HOST_PORT=9090 docker compose -f deploy/docker-compose.yml config` -> `published: "9090"`; re-running `provision.sh` prompts for both new values
+- **Test:** `deploy/test/compose-port.test.sh` (passes locally; skips without the compose CLI)
+- **Note:** deliberately no SSH-helper refactor, so `provision.sh`'s SSH logic isn't unit-tested
+
 ## Next candidates
 
 - Add metadata-only anonymization (strip PDF `/Info` dict + XMP) as a new `ITool` under `Infrastructure/Tools/Anonymization/`, mirroring the watermark token flow (`POST /api/anonymize` -> token -> existing `GET /api/download/{token}`) - deepens the Target, unblocked
-- Deploy filigrane's frontend+nginx to the VPS (e.g. loopback behind host nginx) - edges toward exposure; this is where the "which humans" gate (edge gating vs. per-user auth) finally has to be decided. Logged per the user; not committed to
+- Deploy filigrane's frontend+nginx to the VPS (e.g. loopback behind host nginx) - edges toward exposure; this is where the "which humans" gate (edge gating vs. per-user auth) finally has to be decided. Deferred again at stone 6 (user kept filigrane local); still on the table
 - Edge-gate a network-reachable filigrane (basic auth / IP allowlist / VPN) as a cheap stand-in for user auth, if a shared-but-restricted deploy is wanted before building real auth
 
 ## Deliberately deferred
