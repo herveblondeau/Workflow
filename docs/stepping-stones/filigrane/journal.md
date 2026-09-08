@@ -32,6 +32,7 @@ None yet
 4. Main.Api ships standalone on loopback, reverse proxy left to the operator — `stones/04-drop-caddy-ship-main-api-standalone.md` — `ea01ce7`
 5. Filigrane's prod nginx wired to Main.Api with server-side X-Api-Key injection — `stones/05-wire-filigrane-prod-nginx-to-main-api.md` — filigrane PR `#6`
 6. Main.Api's deploy host port and SSH port made configurable — `stones/06-make-main-api-deploy-ports-configurable.md` — Workflow PR `#10`
+7. Main.Api's Docker image installs tesseract, ffmpeg and yt-dlp so the dockerized API can actually run the tools it shells out to — `stones/07-install-external-tools-in-docker-image.md` — Workflow PR TBD
 
 ## Next candidates
 
@@ -41,6 +42,7 @@ None yet
 
 ## Deliberately deferred
 
+- Use fabric (https://github.com/danielmiessler/Fabric) to download YouTube transcriptions, as an alternative/replacement for the current yt-dlp-based `YouTubeSubtitlesDownloader`
 - Image support
 - In-content redaction (manual or AI-assisted)
 - Rate limiting parity with filigrane nginx (now wired locally via stone 5's nginx; prod deploy still pending)
