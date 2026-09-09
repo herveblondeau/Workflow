@@ -1,6 +1,6 @@
 # 8. Install fabric CLI in the Docker image
 
-**Commit:** (this commit)
+**Commit:** `461a62a` (Workflow PR `#13`, merged as `b34b4e3`)
 
 - **Added:**
   - `Main.Api/Dockerfile` runtime stage installs fabric (https://github.com/danielmiessler/fabric)
