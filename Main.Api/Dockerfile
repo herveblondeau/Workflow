@@ -23,11 +23,17 @@ RUN mkdir -p /app/storage
 #   matching the languages the tool supports)
 # - ffmpeg: YouTubeAudioDownloader (audio extraction)
 # - yt-dlp: YouTubeAudioDownloader, YouTubeSubtitlesDownloader
-# yt-dlp is pulled from the latest GitHub release rather than pinned: YouTube
-# regularly breaks older yt-dlp builds, so a stale pinned version is more
-# likely to silently fail than an unpinned one. Whisper (WhisperTranscriber)
-# needs no external binary - it's the Whisper.net/Whisper.net.Runtime NuGet
-# package, bundled at publish time.
+# - fabric (https://github.com/danielmiessler/fabric): not called from any
+#   Infrastructure tool yet, installed ahead of wiring it up. Its `-y/--transcript`
+#   flag shells out to yt-dlp itself for YouTube transcript extraction. Fabric
+#   refuses to run at all without ~/.config/fabric/.env existing, so an empty
+#   one is created here - real vendor config only matters once an AI-using
+#   Fabric pattern is actually wired up.
+# yt-dlp and fabric are both pulled from their latest GitHub release rather
+# than pinned: both move fast (YouTube regularly breaks older yt-dlp builds),
+# so a stale pinned version is more likely to silently fail than an unpinned
+# one. Whisper (WhisperTranscriber) needs no external binary - it's the
+# Whisper.net/Whisper.net.Runtime NuGet package, bundled at publish time.
 ARG TARGETARCH
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -45,6 +51,8 @@ RUN apt-get update \
     esac \
     && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${YTDLP_ASSET}" -o /usr/local/bin/yt-dlp \
     && chmod +x /usr/local/bin/yt-dlp \
+    && curl -fsSL https://raw.githubusercontent.com/danielmiessler/fabric/main/scripts/installer/install.sh | INSTALL_DIR=/usr/local/bin bash \
+    && mkdir -p /root/.config/fabric && touch /root/.config/fabric/.env \
     && apt-get remove -y curl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*

@@ -17,6 +17,11 @@ First guess:
   - `POST /api/watermark` returns `{ token, downloadUrl, expiresAt, expiresInSeconds }`
   - `GET /api/download/{token}` returns the processed file (single use, expiry)
 - Commits per stone, implemented in a git worktree, with a PR opened per stone
+- `master` has a repo ruleset (added around stone 7) requiring every change - including
+  doc-only journal edits - to land via a PR that passes a CodeQL check; direct pushes to
+  `master` are rejected. CodeQL's managed/default setup sometimes doesn't fire on its own for
+  a PR (no check ever dispatched); an empty retrigger commit (`git commit --allow-empty`)
+  pushed to the PR branch reliably kicks it off
 - Watermarking (and future anonymization) logic is implemented as `ITool<TIn, TOut>` tools under `Infrastructure/Tools/<Name>/`, following the repo's existing convention (see `Infrastructure/Tools/CLAUDE.md`, e.g. `TextTransformers/AITextTransformer.cs`). API controllers are thin: they build the input stream, call the tool, and translate `Result<T>` into an HTTP response. Per-request options are passed into the tool's constructor rather than as method arguments.
 - File-type-specific streams (`PdfStream`, `ImageStream`, `AudioStream`) live in `Core/Models/` as thin `Stream` wrappers, so tools can be typed by content kind rather than by raw `Stream`
 
@@ -33,16 +38,17 @@ None yet
 5. Filigrane's prod nginx wired to Main.Api with server-side X-Api-Key injection — `stones/05-wire-filigrane-prod-nginx-to-main-api.md` — filigrane PR `#6`
 6. Main.Api's deploy host port and SSH port made configurable — `stones/06-make-main-api-deploy-ports-configurable.md` — Workflow PR `#10`
 7. Main.Api's Docker image installs tesseract, ffmpeg and yt-dlp so the dockerized API can actually run the tools it shells out to — `stones/07-install-external-tools-in-docker-image.md` — Workflow PR `#11`, merged
+8. Main.Api's Docker image installs the fabric CLI, confirmed working standalone (real YouTube transcript fetch, no AI vendor config needed) but not yet called from any Infrastructure tool — `stones/08-install-fabric-in-docker-image.md` — Workflow PR TBD
 
 ## Next candidates
 
+- Wire fabric into the YouTube pipeline as a new `ITool` (e.g. alongside or replacing `YouTubeSubtitlesDownloader`), now that fabric itself is confirmed to work standalone in the image - deepens the Target, unblocked
 - Add metadata-only anonymization (strip PDF `/Info` dict + XMP) as a new `ITool` under `Infrastructure/Tools/Anonymization/`, mirroring the watermark token flow (`POST /api/anonymize` -> token -> existing `GET /api/download/{token}`) - deepens the Target, unblocked
 - Deploy filigrane's frontend+nginx to the VPS (e.g. loopback behind host nginx) - edges toward exposure; this is where the "which humans" gate (edge gating vs. per-user auth) finally has to be decided. Deferred again at stone 6 (user kept filigrane local); still on the table
 - Edge-gate a network-reachable filigrane (basic auth / IP allowlist / VPN) as a cheap stand-in for user auth, if a shared-but-restricted deploy is wanted before building real auth
 
 ## Deliberately deferred
 
-- Use fabric (https://github.com/danielmiessler/Fabric) to download YouTube transcriptions, as an alternative/replacement for the current yt-dlp-based `YouTubeSubtitlesDownloader`
 - Image support
 - In-content redaction (manual or AI-assisted)
 - Rate limiting parity with filigrane nginx (now wired locally via stone 5's nginx; prod deploy still pending)
