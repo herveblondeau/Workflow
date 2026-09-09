@@ -1,6 +1,6 @@
 # 7. Install external tools (tesseract, ffmpeg, yt-dlp) in the Docker image
 
-**Commit:** `d96eee7` (Workflow PR `#11`)
+**Commit:** `d96eee7` (Workflow PR `#11`, merged as `6880a23`)
 
 - **Added:**
   - `Main.Api/Dockerfile` runtime stage now installs `tesseract-ocr` (+ `eng`/`fra`/`jpn`
