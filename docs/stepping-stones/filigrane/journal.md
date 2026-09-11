@@ -43,7 +43,7 @@ None yet
 6. Main.Api's deploy host port and SSH port made configurable — `stones/06-make-main-api-deploy-ports-configurable.md` — Workflow PR `#10`
 7. Main.Api's Docker image installs tesseract, ffmpeg and yt-dlp so the dockerized API can actually run the tools it shells out to — `stones/07-install-external-tools-in-docker-image.md` — Workflow PR `#11`, merged
 8. Main.Api's Docker image installs the fabric CLI, confirmed working standalone (real YouTube transcript fetch, no AI vendor config needed) but not yet called from any Infrastructure tool — `stones/08-install-fabric-in-docker-image.md` — Workflow PR `#13`, merged
-9. Fabric wired as the first tier of the YouTube transcription fallback chain (`fabric -> subtitles -> audio+whisper`) via a new `FabricTranscriptDownloader` `ITool`, behind an `IProcessRunner` seam — `stones/09-fabric-first-youtube-transcription.md` — Workflow PR _pending_
+9. Fabric wired as the first tier of the YouTube transcription fallback chain (`fabric -> subtitles -> audio+whisper`) via a new `FabricTranscriptDownloader` `ITool`, behind an `IProcessRunner` seam — `stones/09-fabric-first-youtube-transcription.md` — Workflow PR `#15`
 
 ## Next candidates
 
