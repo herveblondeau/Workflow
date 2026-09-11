@@ -244,6 +244,7 @@ namespace Main.Api
 
                     var workflow = Workflow
                         .Add(FirstSuccessfulTool
+                            .Add(new FabricTranscriptDownloader(language))
                             .Add(new YouTubeSubtitlesDownloader(language))
                             .Add(SequentialTool
                                 .Add(new YouTubeAudioDownloader(audioFormat))

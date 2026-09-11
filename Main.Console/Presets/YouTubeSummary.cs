@@ -44,6 +44,7 @@ public class YouTubeSummary
 
         var workflow = Workflow
             .Add(FirstSuccessfulTool
+                .Add(new FabricTranscriptDownloader(sourceLanguage))
                 .Add(new YouTubeSubtitlesDownloader(sourceLanguage))
                 .Add(SequentialTool
                     .Add(new YouTubeAudioDownloader(audioFormat))
