@@ -24,6 +24,16 @@
   - Fabric's Go flag parser requires `--yt-dlp-args=VALUE` as a single argv entry with `=` syntax;
     the space-separated form (`--yt-dlp-args "--sub-langs en"`) is rejected. This is why the seam
     passes args as a list rather than one quoted string
+  - **The whole chain is unusable from a datacenter/VPS IP.** Deployed to the VPS, all three tiers
+    fail with YouTube bot detection ("Sign in to confirm you're not a bot"); fabric and yt-dlp both
+    demand cookies. `--cookies-from-browser` can't work headless, and a `cookies.txt` workaround
+    risks the Google account being flagged and the VPS provider suspending the account for ToS
+    abuse. Decision: run YouTube extraction **client-side** (residential IP) and POST the transcript
+    to `/api/analysis/text`; keep the VPS API for the AI transforms only. Guarded with a warning
+    comment above `[HttpPost("url")]` in `AnalysisController.cs` so the next caller sees it before
+    hitting the wall. (Also spotted while deploying: `provision.sh` only ever deploys the default
+    branch `master`, never the current worktree branch — TODO left in-file, tracked as a next
+    candidate.)
 - **Demo:**
   - `dotnet test --filter FullyQualifiedName~FabricTranscriptDownloader` (7 pass; pins the
     fallback contract + arg construction)

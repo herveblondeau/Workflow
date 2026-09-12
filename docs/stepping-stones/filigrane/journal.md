@@ -12,6 +12,8 @@ First guess:
 - Stone 9 confirmed fabric and `YouTubeSubtitlesDownloader` are complementary, not redundant
   (subtitles = manual-only; fabric = auto-generated captions), so the multi-tier fallback chain
   is defense-in-depth worth keeping
+- Stone 9 also revealed YouTube extraction is unusable from a datacenter/VPS IP (bot detection);
+  it must run client-side on a residential IP, with only the transcript POSTed to the VPS API
 
 ## Constraints
 
@@ -49,6 +51,7 @@ None yet
 
 - Add metadata-only anonymization (strip PDF `/Info` dict + XMP) as a new `ITool` under `Infrastructure/Tools/Anonymization/`, mirroring the watermark token flow (`POST /api/anonymize` -> token -> existing `GET /api/download/{token}`) - deepens the Target, unblocked
 - Dedupe the YouTube pipeline: it is now built identically in both `YouTubeSummary` preset and `AnalysisController`. Extract one shared builder (a make-room stone; existing tests + demo still pass) - pays down debt stone 9 just doubled
+- Deploy the current worktree branch, not just `master`: `provision.sh` clones/pulls the default branch on the VPS and never checks out the effort branch (TODO left in-file at stone 9). Add a `REPO_BRANCH` var + VPS `fetch/checkout/pull --ff-only` - unblocks deploying any in-progress stone
 - Deploy filigrane's frontend+nginx to the VPS (e.g. loopback behind host nginx) - edges toward exposure; this is where the "which humans" gate (edge gating vs. per-user auth) finally has to be decided. Deferred again at stone 6 (user kept filigrane local); still on the table
 - Edge-gate a network-reachable filigrane (basic auth / IP allowlist / VPN) as a cheap stand-in for user auth, if a shared-but-restricted deploy is wanted before building real auth
 
@@ -59,4 +62,5 @@ None yet
 - Rate limiting parity with filigrane nginx (now wired locally via stone 5's nginx; prod deploy still pending)
 - Splitting `Infrastructure` into per-tool-group NuGet packages (single API preferred until a second real consumer with different needs shows up)
 - Retrofitting the `IProcessRunner` seam onto the existing yt-dlp/whisper tools (they still `new` a `Process` directly; leave until a second reason to touch them appears)
+- Cookie/residential-proxy workaround to make YouTube extraction work from the VPS - deliberately not pursued: high risk of the Google account being flagged and the VPS provider suspending the account for ToS abuse, plus ongoing cookie-rotation maintenance. Client-side extraction sidesteps all of it
 - Deploying filigrane's frontend publicly (needs its own user-level auth first, not just the shared service-to-service `X-Api-Key`)
