@@ -191,6 +191,13 @@ namespace Main.Api
             }
         }
 
+        // WARNING: YouTube URLs trigger yt-dlp/fabric, which YouTube blocks from
+        // datacenter/VPS IPs ("Sign in to confirm you're not a bot"). Calling this
+        // endpoint from a server-hosted deployment for YouTube links will fail, and
+        // working around it (cookies from a datacenter IP) risks getting the Google
+        // account flagged and the VPS account suspended for ToS abuse. Run the
+        // YouTube download client-side (residential IP) and POST the resulting
+        // transcript to /text instead. See also provision.sh.
         [HttpPost("url")]
         public async Task<IActionResult> TransformUrl([FromBody] URLTransformRequest request, CancellationToken cancellationToken)
         {

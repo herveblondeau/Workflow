@@ -249,6 +249,11 @@ else
     exit 1
   fi
   step "Cloning/updating the repo on the VPS..."
+  # TODO(next stone): deploy the current branch, not just the default (master).
+  # `git clone` checks out the default branch and `git pull` (no args) stays on it,
+  # so a worktree branch is never deployed. Add a REPO_BRANCH var (default: local
+  # current branch) and have the VPS `git fetch && git checkout $REPO_BRANCH &&
+  # git pull --ff-only origin $REPO_BRANCH`.
   ssh -p "$VPS_SSH_PORT" "$VPS_SSH" "if [ -d workflow/.git ]; then cd workflow && git pull; else git clone $REPO_URL workflow; fi"
   step "Copying deploy/.env to the VPS..."
   scp -P "$VPS_SSH_PORT" "$ENV_FILE" "$VPS_SSH:workflow/deploy/.env" >/dev/null
