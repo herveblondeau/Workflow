@@ -29,6 +29,8 @@ RUN mkdir -p /app/storage
 #   refuses to run at all without ~/.config/fabric/.env existing, so an empty
 #   one is created here - real vendor config only matters once an AI-using
 #   Fabric pattern is actually wired up.
+# - docling: DoclingConverter / DoclingStreamConverter (installed separately
+#   below via pip — see that block for size and model-caching notes)
 # yt-dlp and fabric are both pulled from their latest GitHub release rather
 # than pinned: both move fast (YouTube regularly breaks older yt-dlp builds),
 # so a stale pinned version is more likely to silently fail than an unpinned
@@ -44,6 +46,7 @@ RUN apt-get update \
         ffmpeg \
         ca-certificates \
         curl \
+        python3-pip \
     && case "$TARGETARCH" in \
         amd64) YTDLP_ASSET=yt-dlp_linux ;; \
         arm64) YTDLP_ASSET=yt-dlp_linux_aarch64 ;; \
@@ -56,6 +59,13 @@ RUN apt-get update \
     && apt-get remove -y curl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+# docling: converts PDF, DOCX, PPTX, XLSX, HTML, images and more to Markdown.
+# Pulls in PyTorch — expect ~2 GB added to the image layer.
+# ML models (layout, table structure, OCR) are downloaded lazily on first use
+# and cached under ~/.cache/docling/models. Mount a named volume there to
+# persist them across container restarts and avoid re-downloading on each run.
+RUN pip3 install --no-cache-dir docling --break-system-packages
 
 COPY --from=build /app/publish .
 EXPOSE 8080
