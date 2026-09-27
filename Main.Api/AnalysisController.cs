@@ -9,6 +9,8 @@ using System.Text.Json;
 using Infrastructure.Files;
 using Infrastructure.Tools.Transcribers;
 using Infrastructure.Downloaders;
+using Infrastructure.Converters;
+using Infrastructure.Processes;
 using Core.Models;
 using Whisper.net.Ggml;
 using Infrastructure.Transcribers;
@@ -22,14 +24,56 @@ namespace Main.Api
     public class AnalysisController : ControllerBase
     {
         private readonly IChatClientFactory _chatClientFactory;
+        private readonly IProcessRunner _processRunner;
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
         };
 
-        public AnalysisController(IChatClientFactory chatClientFactory)
+        public AnalysisController(IChatClientFactory chatClientFactory, IProcessRunner processRunner)
         {
             _chatClientFactory = chatClientFactory;
+            _processRunner = processRunner;
+        }
+
+        [HttpPost("markdown")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> TransformToMarkdown([FromForm] IFormFile file, CancellationToken cancellationToken)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "File is required." });
+            }
+
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrEmpty(extension))
+            {
+                return BadRequest(new { error = "File must have an extension so docling can select its parser." });
+            }
+
+            try
+            {
+                // Per-request option (file extension) -> tool constructed per request.
+                var converter = new DoclingStreamConverter(_processRunner, extension);
+
+                Result<string> result;
+                await using (var stream = file.OpenReadStream())
+                {
+                    result = await converter.Transform(stream, cancellationToken);
+                }
+
+                if (result.IsFailed)
+                {
+                    var errors = result.Errors.Select(e => e.Message).ToList();
+                    return StatusCode(500, new { error = "Document conversion failed.", details = errors });
+                }
+
+                return Ok(new { success = result.IsSuccess, result = result.Value });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "An error occurred while processing the request.", details = ex.Message });
+            }
         }
 
         [HttpPost("text")]

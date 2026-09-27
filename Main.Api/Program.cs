@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Infrastructure.ChatAgents;
 using Infrastructure.ChatAgents.Providers;
+using Infrastructure.Processes;
 using Main.Api;
 using Main.Api.Filigrane.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -18,6 +19,7 @@ builder.Services.AddSingleton<IFileStore, LocalFileStore>();
 builder.Services.AddHostedService<CleanupService>();
 
 // --- Existing services ---
+builder.Services.AddSingleton<IProcessRunner, ProcessRunner>();
 builder.Services.AddSingleton<IChatClientFactory, ChatClientFactory>();
 builder.Services.AddTransient<IProviderModelSource, AnthropicModelSource>();
 builder.Services.AddTransient<IProviderModelSource, OpenAIModelSource>();
