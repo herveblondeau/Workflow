@@ -45,7 +45,7 @@ Decided in grilling (see `.lavish/document-markdown-*.html` in the main checkout
 ## Stones laid
 
 1. `POST /api/analysis/markdown` converts a multipart upload to text-only markdown via the existing
-   `DoclingStreamConverter` — `stones/01-markdown-endpoint-plain-conversion.md` — PR _pending_
+   `DoclingStreamConverter` — `stones/01-markdown-endpoint-plain-conversion.md` — PR `#17`
 
 ## Next candidates
 

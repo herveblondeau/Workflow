@@ -1,6 +1,6 @@
 # 1. Markdown endpoint (plain, text-only conversion)
 
-**PR:** _pending_
+**PR:** `#17`
 
 - **Added:** `POST /api/analysis/markdown` accepts a multipart file upload, converts it to markdown
   via the existing `DoclingStreamConverter` (plain `docling convert --to md`), and returns
