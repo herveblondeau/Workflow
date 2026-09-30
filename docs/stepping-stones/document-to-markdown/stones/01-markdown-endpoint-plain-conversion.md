@@ -13,6 +13,10 @@
     framework reference to `Tests` - a new controller-test seam future endpoint stones can reuse.
   - The extension must be derived from the upload filename and is required (docling has no reliable
     format sniffing on a bare stream); a missing extension is a 400, not a silent failure.
+  - docling's CLI **defaults to embedding images as base64 data URIs**, not to placeholders. The
+    demo surfaced huge base64 blobs in the output. Fixed by passing `--image-export-mode
+    placeholder` in `DoclingConverter` so v1 truly returns text-only markdown (`<!-- image -->`).
+    Stone 2 will switch its own tool to `referenced` mode to actually process the images.
 - **Demo:**
   ```bash
   API_KEY=test ASPNETCORE_URLS=http://localhost:5261 DOTNET_ENVIRONMENT=Development \
@@ -26,3 +30,5 @@
   a successful conversion -> 200 `{ success, result }`, and a docling failure -> 500. Uses a stub
   `IProcessRunner` that writes the markdown a real `docling convert` would produce. The underlying
   `DoclingStreamConverter` was already covered by `Tests/Infrastructure/DoclingStreamConverterTests.cs`.
+  `Tests/Infrastructure/DoclingConverterTests.cs` gains a case pinning the `--image-export-mode
+  placeholder` argument.
