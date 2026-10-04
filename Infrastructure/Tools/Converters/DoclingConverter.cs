@@ -36,7 +36,7 @@ public class DoclingConverter : ITool<string, string>
             {
                 result = await _processRunner.Run(
                     "docling",
-                    ["convert", source, "--to", "md", "--output", outputDir, "--quiet"],
+                    ["convert", source, "--to", "md", "--image-export-mode", "placeholder", "--output", outputDir, "--quiet"],
                     cancellationToken);
             }
             catch (Exception ex)

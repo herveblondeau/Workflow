@@ -117,4 +117,20 @@ public class DoclingConverterTests
         runner.Arguments.Should().Contain("--output");
         runner.Arguments.Should().Contain("--quiet");
     }
+
+    [Fact]
+    public async Task Transform_StripsImagesToPlaceholders()
+    {
+        // docling's CLI defaults to embedding images as base64 data URIs; we force
+        // placeholder mode so the markdown stays text-only.
+        var runner = SuccessfulRunner();
+        var sut = new DoclingConverter(runner);
+
+        await sut.Transform("/tmp/report.docx");
+
+        var args = runner.Arguments!.ToList();
+        var idx = args.IndexOf("--image-export-mode");
+        idx.Should().BeGreaterThanOrEqualTo(0);
+        args[idx + 1].Should().Be("placeholder");
+    }
 }
